@@ -23,7 +23,7 @@ set -x
 case "$should_commit" in
     y|Y|$'\n')
         <<<"$modified" xargs --delim=\\n git add
-        git commit --message="(pre-push hook) auto-format $count file(s)"
+        git commit --message="(format.java.sh) clang-format $count file(s)"
         ;;
     c|C)
         echo cancelling push
