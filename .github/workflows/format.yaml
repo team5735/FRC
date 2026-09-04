@@ -9,6 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-        name: Add repostory to safe.directory
       - run: bash format_code.sh
