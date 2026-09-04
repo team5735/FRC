@@ -14,3 +14,4 @@ bot_email="$bot@users.noreply.github.com"
 GIT_AUTHOR_NAME=$bot    GIT_AUTHOR_EMAIL=$bot_email    \
 GIT_COMMITTER_NAME=$bot GIT_COMMITTER_EMAIL=$bot_email \
 git commit --message="reformat $count files"
+git push --verbose
