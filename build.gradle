@@ -105,3 +105,7 @@ jar {
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
+
+tasks.register('format', Exec) {
+    commandLine '/bin/bash', '-c', '$(git rev-parse --show-toplevel)/format.java.sh'
+}
