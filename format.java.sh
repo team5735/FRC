@@ -1,26 +1,25 @@
 #!/bin/bash
-set -ex -o pipefail
-PS4='F '
+set -x -o pipefail
+PS4=$'F \t$EPOCHREALTIME\t '
 
 cd $(git rev-parse --show-toplevel)
 
-current_branch="$(git symbolic-ref --short HEAD)"
-
 git stash push --quiet
+trap "git stash pop --quiet" exit
 
 files=$(find . -name '*.java' -type f)
-[[ -z "$files" ]] && continue
+[[ -z "$files" ]] && exit 0
 <<<"$files" xargs clang-format --style="file:./.clang-format" -i
 
 modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut --bytes 4-)"
-[[ -z "$modified" ]] && continue
+[[ -z "$modified" ]] && exit 0
 count=$(<<<"$modified" wc -l)
 
 if [[ "$1" = "--no-ask" ]]; then
     should_commit="y"
 else
     set +x
-    read -N 1 -p "commit auto-formatting of $count file(s) on $current_branch (Y/n/c)? " should_commit
+    read -N 1 -p "commit auto-formatting of $count file(s) (Y/n/c)? " should_commit
     [[ "$should_commit" != $'\n' ]] && echo
     set -x
 fi
@@ -39,5 +38,3 @@ case "$should_commit" in
         git restore "$modified"
         ;;
 esac
-
-git stash pop --quiet
