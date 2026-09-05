@@ -1,5 +1,6 @@
 #!/bin/bash
 set -ex -o pipefail
+PS4='F '
 
 cd $(git rev-parse --show-toplevel)
 
@@ -16,12 +17,12 @@ modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut -
 count=$(<<<"$modified" wc -l)
 
 if [[ "$1" = "--no-ask" ]]; then
+    should_commit="y"
+else
     set +x
     read -N 1 -p "commit auto-formatting of $count file(s) on $current_branch (Y/n/c)? " should_commit
     [[ "$should_commit" != $'\n' ]] && echo
     set -x
-else
-    should_commit="y"
 fi
 
 case "$should_commit" in
