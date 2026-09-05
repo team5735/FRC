@@ -15,10 +15,14 @@ modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut -
 [[ -z "$modified" ]] && continue
 count=$(<<<"$modified" wc -l)
 
-set +x
-read -N 1 -p "commit auto-formatting of $count file(s) on $current_branch (Y/n/c)? " should_commit
-[[ "$should_commit" != $'\n' ]] && echo
-set -x
+if [[ "$1" = "--no-ask" ]]; then
+    set +x
+    read -N 1 -p "commit auto-formatting of $count file(s) on $current_branch (Y/n/c)? " should_commit
+    [[ "$should_commit" != $'\n' ]] && echo
+    set -x
+else
+    should_commit="y"
+fi
 
 case "$should_commit" in
     y|Y|$'\n')
