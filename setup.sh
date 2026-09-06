@@ -17,19 +17,32 @@ set -e
 echo installing necessary packages
 sudo apt-get install --yes wget pv pigz tar git gh
 
-echo downloading robot code to ~/robotics/FRC
-if [[ ! -d ~/robotics/FRC ]]; then
-    mkdir --parents ~/robotics
-    git clone https://github.com/team5735/FRC ~/robotics/FRC
+while true; do
+    read -p "first name: " firstname
+    read -p "last name: " lastname
+    echo name: "$firstname" "$lastname"
+    email="${firstname@L}"_"${lastname@L}"@student.waylandps.org
+    echo email: "$email"
+    read -p "is this right (Y/n)? " correct
+    [[ "${correct@L}" != "y" ]] && continue
+
+    git config --global user.name "$firstname" "$lastname"
+    git config --global user.email "$email"
+    break
+done
+
+echo downloading robot code to ~/FRC
+if [[ ! -d ~/FRC ]]; then
+    git clone https://github.com/team5735/FRC ~/FRC
 else
     cat <<END
-~/robotics/FRC is already present, not overwriting
+~/FRC is already present, not overwriting
 to redownload the repository, run the following in your terminal:
-rm -rf ~/robotics/FRC; git clone https://github.com/team5735/FRC ~/robotics/FRC
+rm -rf ~/FRC; git clone https://github.com/team5735/FRC ~/FRC
 END
 fi
 
-echo logging into GitHub\; if you do not have an account you can make it here
+echo logging into GitHub. if you do not have an account you can make it now
 echo to cancel the login, use Ctrl+C in the terminal
 trap "echo cancelled auth" SIGINT
 gh auth login --git-protocol HTTPS --hostname github.com --web || true
