@@ -1,5 +1,6 @@
 #!/bin/bash
-set -x -o pipefail
+set -o pipefail
+# add set -x for debugging and profiling
 PS4=$'F \t$EPOCHREALTIME\t '
 
 cd $(git rev-parse --show-toplevel)
