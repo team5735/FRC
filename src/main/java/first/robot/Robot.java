@@ -4,16 +4,12 @@
 
 package first.robot;
 
-import first.robot.constants.DriverConstants;
-import first.robot.mechanisms.ExampleMechanism;
 import org.wpilib.command3.Scheduler;
-import org.wpilib.command3.button.CommandGamepad;
+import org.wpilib.command3.button.CommandXboxController;
 import org.wpilib.framework.OpModeRobot;
 
 public class Robot extends OpModeRobot {
-    final ExampleMechanism exampleMechanism = new ExampleMechanism();
-    final CommandGamepad exampleController =
-        new CommandGamepad(DriverConstants.DRIVER_CONTROLLER_PORT);
+    public final CommandXboxController port0 = new CommandXboxController(0);
 
     public Robot() {}
 

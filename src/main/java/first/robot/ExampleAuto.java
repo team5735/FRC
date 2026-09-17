@@ -10,7 +10,6 @@ import org.wpilib.opmode.OpMode;
 @Autonomous
 public class ExampleAuto implements OpMode {
     public ExampleAuto(Robot robot) {
-        robot.exampleMechanism.exampleCondition.whileTrue(
-            robot.exampleMechanism.exampleCommand());
+        // TODO: import PathPlanner paths and create an @Autonomous for all
     }
 }
