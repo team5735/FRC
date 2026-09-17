@@ -14,6 +14,7 @@ files=$(find . -name '*.java' -type f)
 
 modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut --bytes 4-)"
 [[ -z "$modified" ]] && exit 0
+[[ "$1" == "--check" ]] && exit 1
 count=$(<<<"$modified" wc -l)
 
 if [[ "$1" = "--no-ask" ]]; then
