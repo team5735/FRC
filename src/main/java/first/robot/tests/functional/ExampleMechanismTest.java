@@ -12,7 +12,7 @@ public class ExampleMechanismTest extends PeriodicOpMode {
     ExampleMechanism mechanism;
 
     ExampleMechanismTest(Robot robot) {
-        robot.driverController.a().whileTrue(mechanism.exampleCommand());
+        robot.port0.a().whileTrue(mechanism.exampleCommand());
     }
 
     @Override
