@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableEntry;
@@ -46,19 +45,13 @@ public class NTable {
     private final NTable parent;
 
     /** {@return the parent of this NTable, or null if this == NTable.root()} */
-    public NTable getParent() {
-        return parent;
-    }
+    public NTable getParent() { return parent; }
 
     /** {@return the underlying {@link NetworkTable}} */
-    public NetworkTable getTable() {
-        return table;
-    }
+    public NetworkTable getTable() { return table; }
 
     /** {@return the path of this NTable} */
-    public String getPath() {
-        return this.table.getPath();
-    }
+    public String getPath() { return this.table.getPath(); }
 
     private HashMap<String, NTable> subTables = new HashMap<>();
     private HashMap<String, NetworkTableEntry> entries = new HashMap<>();
@@ -68,8 +61,9 @@ public class NTable {
         this.parent = parent;
         long depth = this.table.getPath().chars().filter(c -> c == '/').count();
         if (depth > 50) {
-            DriverStationErrors.reportWarning("very long NTable of depth " + depth
-                    + " created! be careful. its path is " + this.table.getPath(), true);
+            DriverStationErrors.reportWarning("very long NTable of depth " + depth +
+                                                  " created! be careful. its path is " + this.table.getPath(),
+                                              true);
         }
 
         for (String entry : this.table.getKeys()) {
@@ -78,25 +72,21 @@ public class NTable {
     }
 
     /** {@return the root NTable} */
-    public static NTable root() {
-        return root;
-    }
+    public static NTable root() { return root; }
 
     /**
      * {@return a subtable of the root NTable}
-     * 
+     *
      * @param name the name of the subtable
      */
-    public static NTable root(String name) {
-        return root().sub(name);
-    }
+    public static NTable root(String name) { return root().sub(name); }
 
     /**
      * {@return a subtable of this NTable}
      *
      * <p>
      * Creates the subtable if it does not already exist.
-     * 
+     *
      * @param name the name of the subtable
      */
     public NTable sub(String name) {
@@ -115,19 +105,21 @@ public class NTable {
      * @param name the name of the entry
      */
     public NetworkTableEntry getEntry(String name) {
-        return entries.computeIfAbsent(name, n -> new NetworkTableEntry(instance,
-                NetworkTablesJNI.getEntry(
-                        instance.getHandle(),
-                        this.table.getPath() + "/" + name)));
+        return entries.computeIfAbsent(
+            name,
+            n
+            -> new NetworkTableEntry(
+                instance, NetworkTablesJNI.getEntry(instance.getHandle(), this.table.getPath() + "/" + name)));
     }
 
     public NetworkTableEntry getEntry(String name, NetworkTableType type, String typeName) {
-        return entries.computeIfAbsent(name, n -> new NetworkTableEntry(instance,
-                NetworkTablesJNI.getEntry(
-                        NetworkTablesJNI.getTopic(instance.getHandle(),
-                                this.table.getPath() + "/" + name),
-                        type.getValue(),
-                        typeName)));
+        return entries.computeIfAbsent(
+            name,
+            n
+            -> new NetworkTableEntry(
+                instance, NetworkTablesJNI.getEntry(
+                              NetworkTablesJNI.getTopic(instance.getHandle(), this.table.getPath() + "/" + name),
+                              type.getValue(), typeName)));
     }
 
     /**
@@ -138,12 +130,12 @@ public class NTable {
      * passed to the parameter {@code value}. This function acts as a catch-all for
      * anything that can be posted to NetworkTables, in the spirit of this class's
      * 'set and forget' philosophy.
-     * 
+     *
      * <p>
      * If the type is a so-called 'simple' type, it is passed to
      * {@link #setSimple(String, Object)}. See the end of this function's
      * documentation for a discussion of the term 'simple'.
-     * 
+     *
      * <p>
      * Otherwise, the type is checked to see whether it has a registered
      * {@code Struct<T>} associated with its class type.
@@ -164,7 +156,7 @@ public class NTable {
      *
      * <p>
      * The following types are considered 'simple':
-     * 
+     *
      * <ul>
      * <li>{@code Boolean}</li>
      * <li>{@code Float}</li>
@@ -172,7 +164,7 @@ public class NTable {
      * <li>{@code Double}</li>
      * <li>{@code String}</li>
      * </ul>
-     * 
+     *
      * Arrays of any of the above, as well as arrays of their respective primitive
      * types (except for String, which does not have an associated primitive type)
      * are also considered 'simple'. For example, the following types are 'simple':
@@ -181,7 +173,7 @@ public class NTable {
      * {@link Object} type, such as {@link Integer} in the case of int. Therefore,
      * passing a primitive to the value parameter of this function will work as
      * expected.
-     * 
+     *
      * <p>
      * There are two other types considered 'simple': {@code byte[]} and
      * {@code Byte[]}. These are classified as 'raw' data and are typically used to
@@ -193,7 +185,7 @@ public class NTable {
      * non-double numerics mentioned above, {@code Float} and {@code Long}. For
      * example, this function will accept a {@code Byte} (not an array of byte;
      * that would fall under the previous paragraph!) and send it as a double.
-     * 
+     *
      * @param name  the name of the entry to publish
      * @param value the Object to publish
      *
@@ -212,8 +204,7 @@ public class NTable {
         // type.
         Struct<?> possibleStruct = getStructForType(value.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked")
-            Struct<T> casted = (Struct<T>) possibleStruct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)possibleStruct;
             setStruct(name, value, casted);
             return;
         }
@@ -227,18 +218,16 @@ public class NTable {
                 // component type of value. Due to Java generics being a pile of type-erasing
                 // bullshit, we can cast everything to be in terms of Object and it should just
                 // work.
-                @SuppressWarnings("unchecked")
-                Struct<Object> castedStruct = (Struct<Object>) possibleStruct;
+                @SuppressWarnings("unchecked") Struct<Object> castedStruct = (Struct<Object>)possibleStruct;
                 setStructArray(name, casted, castedStruct);
                 return;
             }
         }
 
         // If none of the above cases apply, print a warning.
-        DriverStationErrors.reportError(
-                "NTable: Could not publish value of type " + value.getClass().getName() + " to entry " + name
-                        + ": it is not supported.",
-                false);
+        DriverStationErrors.reportError("NTable: Could not publish value of type " + value.getClass().getName() +
+                                            " to entry " + name + ": it is not supported.",
+                                        false);
     }
 
     /**
@@ -266,8 +255,10 @@ public class NTable {
      */
     public void setSimple(String name, Object value) {
         if (!NetworkTableEntry.isValidDataType(value)) {
-            DriverStationErrors.reportWarning("NTable entry " + table.getPath() + "/" + name
-                    + " has invalid type; the passed object is of type " + value.getClass().getName(), true);
+            DriverStationErrors.reportWarning("NTable entry " + table.getPath() + "/" + name +
+                                                  " has invalid type; the passed object is of type " +
+                                                  value.getClass().getName(),
+                                              true);
             return;
         }
         getEntry(name).setValue(value);
@@ -275,8 +266,8 @@ public class NTable {
 
     /** Publishes a ByteBuffer to the NetworkTable. */
     private void publishRawBuffer(String name, ByteBuffer buffer, String typeString) {
-        NetworkTablesJNI.setRaw(getEntry(name, NetworkTableType.RAW, typeString).getHandle(),
-                NetworkTablesJNI.now(), buffer, 0, buffer.position());
+        NetworkTablesJNI.setRaw(getEntry(name, NetworkTableType.RAW, typeString).getHandle(), NetworkTablesJNI.now(),
+                                buffer, 0, buffer.position());
     }
 
     /**
@@ -295,7 +286,7 @@ public class NTable {
      * {@link #cachedStructs} for the cache.
      *
      * @param classType the class type to get the struct for
-     * 
+     *
      * @return the struct for the given class type
      */
     private <T> Struct<T> getStructForType(Class<?> classType) {
@@ -309,15 +300,14 @@ public class NTable {
             // function, use it
             Struct<?> struct = cachedStructs.get(classType);
             if (!struct.getTypeClass().isAssignableFrom(classType)) {
-                DriverStationErrors.reportError(
-                        "tried to publish a " + classType.getName() + ", but a struct of type "
-                                + struct.getTypeClass().getName() + " had already been registered for this entry in "
-                                + table.getPath(),
-                        true);
+                DriverStationErrors.reportError("tried to publish a " + classType.getName() +
+                                                    ", but a struct of type " + struct.getTypeClass().getName() +
+                                                    " had already been registered for this entry in " +
+                                                    table.getPath(),
+                                                true);
                 return null;
             }
-            @SuppressWarnings("unchecked")
-            Struct<T> casted = (Struct<T>) struct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)struct;
             return casted;
         }
 
@@ -332,8 +322,7 @@ public class NTable {
             if (!(possibleStruct instanceof Struct<?> struct) || !struct.getTypeClass().isAssignableFrom(classType)) {
                 return null;
             }
-            @SuppressWarnings("unchecked")
-            Struct<T> casted = (Struct<T>) struct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)struct;
             cachedStructs.put(classType, struct);
             return casted;
 
@@ -414,12 +403,12 @@ public class NTable {
      * passed to the parameter {@code defaultValue}. This function acts as a
      * catch-all for anything that can be retrieved from NetworkTables, in the
      * spirit of this class's 'set and forget' philosophy.
-     * 
+     *
      * <p>
      * If the type is a so-called 'simple' type, this function defers to
      * {@link #getSimple(String, NetworkTableType)}. See the end of this function's
      * documentation for a discussion of the term 'simple'.
-     * 
+     *
      * <p>
      * If the type is a {@link Sendable}, this function returns the stored sendable
      * as was last set under this name. In other words, setting a sendable then
@@ -442,10 +431,10 @@ public class NTable {
      * <p>
      * If none of the above cases apply, a warning is printed and the defalut value
      * is returned.
-     * 
+     *
      * <p>
      * The following types are considered 'simple':
-     * 
+     *
      * <ul>
      * <li>{@code Boolean}</li>
      * <li>{@code Float}</li>
@@ -453,7 +442,7 @@ public class NTable {
      * <li>{@code Double}</li>
      * <li>{@code String}</li>
      * </ul>
-     * 
+     *
      * Arrays of any of the above, as well as arrays of their respective primitive
      * types (except for String, which does not have an associated primitive type)
      * are also considered 'simple'. For example, the following types are 'simple':
@@ -462,7 +451,7 @@ public class NTable {
      * {@link Object} type, such as {@link Integer} in the case of int. Therefore,
      * passing a primitive to the value parameter of this function will work as
      * expected.
-     * 
+     *
      * <p>
      * There are two other types considered 'simple': {@code byte[]} and
      * {@code Byte[]}. These are classified as 'raw' data and are typically used to
@@ -474,7 +463,7 @@ public class NTable {
      * non-double numerics mentioned above, {@code Float} and {@code Long}. For
      * example, this function will accept a {@code Byte} (not an array of byte;
      * that would fall under the previous paragraph!) and send it as a double.
-     * 
+     *
      * @param name         the name of the entry to retrieve from
      * @param defaultValue the default value to return if the entry does not exist
      *                     or is invalid
@@ -491,8 +480,7 @@ public class NTable {
             if (!classType.isInstance(retrieved.getValue())) {
                 return defaultValue;
             }
-            @SuppressWarnings("unchecked")
-            T value = (T) defaultValue.getClass().cast(retrieved.getValue());
+            @SuppressWarnings("unchecked") T value = (T)defaultValue.getClass().cast(retrieved.getValue());
             return value;
         }
 
@@ -501,8 +489,7 @@ public class NTable {
         // type.
         Struct<?> possibleStruct = getStructForType(defaultValue.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked")
-            Struct<T> casted = (Struct<T>) possibleStruct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)possibleStruct;
             T result = getStruct(name, casted);
             if (result == null) {
                 return defaultValue;
@@ -520,8 +507,7 @@ public class NTable {
                 // here,
                 // and is in fact the value-type of the T here (meaning the T of #get is of type
                 // E[] where E is referred to as T within getStructArray).
-                @SuppressWarnings("unchecked")
-                T result = (T) getStructArray(name, possibleStruct2);
+                @SuppressWarnings("unchecked") T result = (T)getStructArray(name, possibleStruct2);
                 if (result == null) {
                     return defaultValue;
                 }
@@ -530,10 +516,10 @@ public class NTable {
         }
 
         // If none of the above cases apply, print a warning.
-        DriverStationErrors.reportError(
-                "NTable: Could not retrieve value of type " + defaultValue.getClass().getName() + " to entry " + name
-                        + ": it is not supported.",
-                true);
+        DriverStationErrors.reportError("NTable: Could not retrieve value of type " +
+                                            defaultValue.getClass().getName() + " to entry " + name +
+                                            ": it is not supported.",
+                                        true);
         return defaultValue;
     }
 
@@ -545,45 +531,31 @@ public class NTable {
      * warning is printed and a value of the current entry's type is returned. If no
      * value has been published under this name, returns a NetworkTableValue with
      * type kUnassigned.
-     * 
+     *
      * @param name the name of the entry
      * @param type the type of the entry
      *
      * @return the requested value as a {@link NetworkTableValue}
      */
-    public NetworkTableValue getSimple(String name, NetworkTableType type) {
-        return getEntry(name).getValue();
-    }
+    public NetworkTableValue getSimple(String name, NetworkTableType type) { return getEntry(name).getValue(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public double getDouble(String name) {
-        return getSimple(name, NetworkTableType.DOUBLE).getDouble();
-    }
+    public double getDouble(String name) { return getSimple(name, NetworkTableType.DOUBLE).getDouble(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public boolean getBoolean(String name) {
-        return getSimple(name, NetworkTableType.BOOLEAN).getBoolean();
-    }
+    public boolean getBoolean(String name) { return getSimple(name, NetworkTableType.BOOLEAN).getBoolean(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public String getString(String name) {
-        return getSimple(name, NetworkTableType.STRING).getString();
-    }
+    public String getString(String name) { return getSimple(name, NetworkTableType.STRING).getString(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public long getInt(String name) {
-        return getSimple(name, NetworkTableType.INTEGER).getInteger();
-    }
+    public long getInt(String name) { return getSimple(name, NetworkTableType.INTEGER).getInteger(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public float getLong(String name) {
-        return getSimple(name, NetworkTableType.FLOAT).getFloat();
-    }
+    public float getLong(String name) { return getSimple(name, NetworkTableType.FLOAT).getFloat(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public byte[] getRaw(String name) {
-        return getSimple(name, NetworkTableType.RAW).getRaw();
-    }
+    public byte[] getRaw(String name) { return getSimple(name, NetworkTableType.RAW).getRaw(); }
 
     /** @see #getSimple(String, NetworkTableType) */
     public double[] getDoubleArray(String name) {
@@ -601,14 +573,10 @@ public class NTable {
     }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public long[] getIntArray(String name) {
-        return getSimple(name, NetworkTableType.INTEGER_ARRAY).getIntegerArray();
-    }
+    public long[] getIntArray(String name) { return getSimple(name, NetworkTableType.INTEGER_ARRAY).getIntegerArray(); }
 
     /** @see #getSimple(String, NetworkTableType) */
-    public float[] getFloatArray(String name) {
-        return getSimple(name, NetworkTableType.FLOAT_ARRAY).getFloatArray();
-    }
+    public float[] getFloatArray(String name) { return getSimple(name, NetworkTableType.FLOAT_ARRAY).getFloatArray(); }
 
     /**
      * Attempts to retrieve and unpack a struct under the given path in
@@ -636,8 +604,8 @@ public class NTable {
             StructBuffer<T> buffer = StructBuffer.create(struct);
             return buffer.read(raw);
         } catch (RuntimeException e) {
-            DriverStationErrors.reportWarning("NTable entry " + table.getPath() +
-                    "/" + name + " could not be unpacked: " + e.getMessage(), true);
+            DriverStationErrors.reportWarning(
+                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true);
             return null;
         }
     }
@@ -668,13 +636,14 @@ public class NTable {
             StructBuffer<T> buffer = StructBuffer.create(struct);
             return buffer.readArray(raw);
         } catch (RuntimeException e) {
-            DriverStationErrors.reportWarning("NTable entry " + table.getPath() +
-                    "/" + name + " could not be unpacked: " + e.getMessage(), true);
+            DriverStationErrors.reportWarning(
+                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true);
             return null;
         }
     }
 
-    public <T> Tunable<T> tunable(String name, Supplier<T> getter, Consumer<T> setCallback, Class<T> classType, TunableConfig config) {
+    public <T> Tunable<T> tunable(String name, Supplier<T> getter, Consumer<T> setCallback, Class<T> classType,
+                                  TunableConfig config) {
         Tunable<T> res = Tunable.createConfig(null, null, classType, config);
         TunableRegistry.publish(getPath() + name, res);
         return res;
@@ -690,9 +659,7 @@ public class NTable {
         return res;
     }
 
-    public <T> Tunable<T> tunable(String name, T initialValue) {
-        return tunable(name, initialValue, null);
-    }
+    public <T> Tunable<T> tunable(String name, T initialValue) { return tunable(name, initialValue, null); }
 
     public <T> Tunable<T> tunable(String name, Class<T> classType, TunableConfig config) {
         Tunable<T> res = Tunable.createNullConfig(classType, config);
@@ -700,9 +667,7 @@ public class NTable {
         return res;
     }
 
-    public <T> Tunable<T> tunable(String name, Class<T> classType) {
-        return tunable(name, classType, null);
-    }
+    public <T> Tunable<T> tunable(String name, Class<T> classType) { return tunable(name, classType, null); }
 
     // listen for changes to an entry
     public <T> void listen(String name, Consumer<T> consumer, Class<T> classType) {
@@ -715,14 +680,10 @@ public class NTable {
     }
 
     /** {@return whether the given name is present on NetworkTables} */
-    public boolean exists(String name) {
-        return getEntry(name).exists();
-    }
+    public boolean exists(String name) { return getEntry(name).exists(); }
 
     /** {@return whether all of the given names are present in this NTable} */
-    public boolean exists(String... names) {
-        return Arrays.stream(names).allMatch(name -> exists(name));
-    }
+    public boolean exists(String... names) { return Arrays.stream(names).allMatch(name -> exists(name)); }
 
     /**
      * {@return whether the given name is present in this NTable, and if not, sets
@@ -739,7 +700,7 @@ public class NTable {
 
     /**
      * Makes the specified entries persist through program restarts.
-     * 
+     *
      * @param names the names of the entries
      */
     public void makePersistent(String... names) {
@@ -750,7 +711,7 @@ public class NTable {
 
     /**
      * Makes the specified entries not persist through program restarts.
-     * 
+     *
      * @param names the names of the entries
      */
     public void clearPersistent(String... names) {

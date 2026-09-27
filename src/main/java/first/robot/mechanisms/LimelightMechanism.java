@@ -11,8 +11,9 @@ import static org.wpilib.units.Units.Meters;
 import static org.wpilib.units.Units.Radians;
 import static org.wpilib.units.Units.RadiansPerSecond;
 
+import first.robot.constants.FieldConstants;
+import first.robot.util.NTable;
 import java.util.Arrays;
-
 import org.wpilib.command3.Mechanism;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Pose3d;
@@ -27,18 +28,15 @@ import org.wpilib.system.Timer;
 import org.wpilib.telemetry.Telemetry;
 import org.wpilib.units.measure.Distance;
 
-import first.robot.util.NTable;
-import first.robot.constants.FieldConstants;
-
 public class LimelightMechanism implements Mechanism {
     /*
      * In the Limelight web ui, under configuration, april tag
      * Area (% of image) min/max sliders:
      *  0.1506 -- 1.0
-     * 
+     *
      * exposure: 240 (2.40ms)
      * gain: 3
-     * 
+     *
      * MegaTag Field-Space Localization Setup
      * fone:
      *  forward: -0.263525
@@ -54,10 +52,10 @@ public class LimelightMechanism implements Mechanism {
      *     roll: 0
      *    pitch: 0
      *      yaw: -90
-     * 
-     * 
-     * 
-     * 
+     *
+     *
+     *
+     *
      */
 
     private final DrivetrainMechanism drivetrain;
@@ -66,9 +64,7 @@ public class LimelightMechanism implements Mechanism {
 
     private final NTable lltable;
 
-    public LimelightMechanism(
-            DrivetrainMechanism drivetrain,
-            String limelightName) {
+    public LimelightMechanism(DrivetrainMechanism drivetrain, String limelightName) {
         super();
 
         this.limelightName = limelightName;
@@ -87,8 +83,7 @@ public class LimelightMechanism implements Mechanism {
         lltable = NTable.root(limelightName);
     }
 
-    public record RawFiducial(double ambiguity, Distance distToCamera) {
-    }
+    public record RawFiducial(double ambiguity, Distance distToCamera) {}
 
     public class PoseEstimate {
         public RawFiducial[] fiducials;
@@ -106,18 +101,13 @@ public class LimelightMechanism implements Mechanism {
             if (array.length == 0 || stddevs.length == 0) {
                 return;
             }
-            int nFiducials = (int) array[7];
+            int nFiducials = (int)array[7];
             if (nFiducials == 0) {
                 return;
             }
-            Translation3d translation = new Translation3d(
-                    Meters.of(array[0]),
-                    Meters.of(array[1]),
-                    Meters.of(array[2]));
-            Rotation3d rotation = new Rotation3d(
-                    Degrees.of(array[3]),
-                    Degrees.of(array[4]),
-                    Degrees.of(array[5]));
+            Translation3d translation =
+                new Translation3d(Meters.of(array[0]), Meters.of(array[1]), Meters.of(array[2]));
+            Rotation3d rotation = new Rotation3d(Degrees.of(array[3]), Degrees.of(array[4]), Degrees.of(array[5]));
             double latency = array[6];
 
             RawFiducial[] fiducials = new RawFiducial[nFiducials];
@@ -133,30 +123,20 @@ public class LimelightMechanism implements Mechanism {
             this.fiducials = fiducials;
             this.distToCamera = array[9];
 
-            this.stddevs = new Pose3d(
-                    new Translation3d(
-                            Meters.of(stddevs[0]),
-                            Meters.of(stddevs[1]),
-                            Meters.of(stddevs[2])),
-                    new Rotation3d(
-                            Degrees.of(stddevs[3]),
-                            Degrees.of(stddevs[4]),
-                            Degrees.of(stddevs[5])));
+            this.stddevs =
+                new Pose3d(new Translation3d(Meters.of(stddevs[0]), Meters.of(stddevs[1]), Meters.of(stddevs[2])),
+                           new Rotation3d(Degrees.of(stddevs[3]), Degrees.of(stddevs[4]), Degrees.of(stddevs[5])));
         }
     }
 
-    public void setIMUMode(int mode) {
-        this.lltable.set("imumode_set", mode);
-    }
+    public void setIMUMode(int mode) { this.lltable.set("imumode_set", mode); }
 
     public void setIMUToPigeon() {
         setIMUMode(1);
 
         Pose2d pose = drivetrain.getEstimatedPosition();
         // format is yaw, yawRate, pitch, pitchRate, roll, rollRate
-        this.lltable.set(
-                "robot_orientation_set",
-                new double[] { pose.getRotation().getDegrees(), 0, 0, 0, 0, 0 });
+        this.lltable.set("robot_orientation_set", new double[] {pose.getRotation().getDegrees(), 0, 0, 0, 0, 0});
     }
 
     private boolean check(double measurement, String name) {
@@ -166,9 +146,7 @@ public class LimelightMechanism implements Mechanism {
         return ok;
     }
 
-    public Pose2d getPoseEstimate() {
-        return new PoseEstimate().pose2d;
-    }
+    public Pose2d getPoseEstimate() { return new PoseEstimate().pose2d; }
 
     public void handleVisionMeasurement() {
         if (!NTable.root("vision").get("enabled", true)) {
@@ -188,44 +166,34 @@ public class LimelightMechanism implements Mechanism {
 
         boolean accepted = true;
 
-        accepted = check(
-                estimate.pose3d.getMeasureZ().in(Meters),
-                "distance from ground") &&
-                accepted;
+        accepted = check(estimate.pose3d.getMeasureZ().in(Meters), "distance from ground") && accepted;
 
         // pose estimate is off the field
-        double conservativeRobotRadius = (Math.max(
-                drivetrain.constants.getRobotTotalLength().in(Meters),
-                drivetrain.constants.getRobotTotalWidth().in(Meters))
-                * Math.sqrt(2)) / 2;
+        double conservativeRobotRadius = (Math.max(drivetrain.constants.getRobotTotalLength().in(Meters),
+                                                   drivetrain.constants.getRobotTotalWidth().in(Meters)) *
+                                          Math.sqrt(2)) /
+                                         2;
 
-        if (estimate.pose2d.getTranslation().getX() < conservativeRobotRadius
-                || estimate.pose2d.getTranslation()
-                        .getX() > (FieldConstants.FIELD_LENGTH_X.in(Meters) - conservativeRobotRadius)
-                || estimate.pose2d.getTranslation().getY() < conservativeRobotRadius || estimate.pose2d.getTranslation()
-                        .getY() > (FieldConstants.FIELD_LENGTH_Y.in(Meters) - conservativeRobotRadius)) {
+        if (estimate.pose2d.getTranslation().getX() < conservativeRobotRadius ||
+            estimate.pose2d.getTranslation().getX() >
+                (FieldConstants.FIELD_LENGTH_X.in(Meters)-conservativeRobotRadius) ||
+            estimate.pose2d.getTranslation().getY() < conservativeRobotRadius ||
+            estimate.pose2d.getTranslation().getY() >
+                (FieldConstants.FIELD_LENGTH_Y.in(Meters)-conservativeRobotRadius)) {
             this.table.sub("checks").set("in field", false);
             accepted = false;
         }
         this.table.sub("checks").set("in field", true);
 
-        double[] ambiguities = Arrays.stream(estimate.fiducials)
-                .mapToDouble(tag -> tag.ambiguity)
-                .toArray();
+        double[] ambiguities = Arrays.stream(estimate.fiducials).mapToDouble(tag -> tag.ambiguity).toArray();
         if (ambiguities.length == 1) {
-            accepted = check(
-                    ambiguities[0],
-                    "single tag ambiguity") && accepted;
+            accepted = check(ambiguities[0], "single tag ambiguity") && accepted;
         } else if (ambiguities.length > 1) {
-            accepted = check(
-                    Arrays.stream(ambiguities).max().getAsDouble(),
-                    "multi tag ambiguity") && accepted;
+            accepted = check(Arrays.stream(ambiguities).max().getAsDouble(), "multi tag ambiguity") && accepted;
         }
 
-        accepted = check(
-                drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(),
-                "angular velocity")
-                && accepted;
+        accepted = check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(), "angular velocity") &&
+                   accepted;
 
         if (!accepted) {
             return;
@@ -249,28 +217,20 @@ public class LimelightMechanism implements Mechanism {
     }
 
     private double applyPenalties(PoseEstimate estimate) {
-        double distPenalty = penalize(
-                estimate.distToCamera,
-                "distance");
+        double distPenalty = penalize(estimate.distToCamera, "distance");
 
         double speedPenalty = penalize(
-                Math.hypot(
-                        drivetrain.getState().Speeds.vxMetersPerSecond,
-                        drivetrain.getState().Speeds.vyMetersPerSecond) * 5,
-                "speed");
+            Math.hypot(drivetrain.getState().Speeds.vxMetersPerSecond, drivetrain.getState().Speeds.vyMetersPerSecond) *
+                5,
+            "speed");
 
         double omegaPenalty = penalize(Math.abs(drivetrain.getState().Speeds.omegaRadiansPerSecond), "omega");
 
-        double ambiguityPenalty = penalize(
-                Arrays.stream(estimate.fiducials)
-                        .mapToDouble(fiducial -> fiducial.ambiguity)
-                        .sum(),
-                "ambiguity");
+        double ambiguityPenalty =
+            penalize(Arrays.stream(estimate.fiducials).mapToDouble(fiducial -> fiducial.ambiguity).sum(), "ambiguity");
         ambiguityPenalty *= ambiguityPenalty;
 
-        double singleTagPenalty = penalize(
-                estimate.fiducials.length == 1 ? 1 : 0,
-                "single tag");
+        double singleTagPenalty = penalize(estimate.fiducials.length == 1 ? 1 : 0, "single tag");
 
         return distPenalty * speedPenalty * omegaPenalty * ambiguityPenalty * singleTagPenalty;
     }
@@ -278,8 +238,7 @@ public class LimelightMechanism implements Mechanism {
     private void updateVisionMeasurement(PoseEstimate estimate) {
         // completely reset the pose estimator if it's not having a good time
         if (drivetrainIsNaNOrInf()) {
-            System.out.println(
-                    "resetting drivetrain pose estimator due to nan or inf");
+            System.out.println("resetting drivetrain pose estimator due to nan or inf");
             drivetrain.resetPose(estimate.pose2d);
         }
 
@@ -292,49 +251,34 @@ public class LimelightMechanism implements Mechanism {
         coefficients.set("ambiguity", 1);
         coefficients.set("single tag", 3.33);
 
-        Vector<N3> stddevs = VecBuilder.fill(
-                estimate.stddevs.getX(),
-                estimate.stddevs.getY(),
-                estimate.stddevs.getRotation().getMeasureZ().in(Radians));
+        Vector<N3> stddevs = VecBuilder.fill(estimate.stddevs.getX(), estimate.stddevs.getY(),
+                                             estimate.stddevs.getRotation().getMeasureZ().in(Radians));
 
         // ensure reasonable minimums
-        stddevs.getData()[0] = Math.max(
-                Centimeters.of(1).in(Meters),
-                stddevs.getData()[0]);
-        stddevs.getData()[1] = Math.max(
-                Centimeters.of(1).in(Meters),
-                stddevs.getData()[1]);
-        stddevs.getData()[2] = Math.max(
-                Degrees.of(0.25).in(Radians),
-                stddevs.getData()[2]);
+        stddevs.getData()[0] = Math.max(Centimeters.of(1).in(Meters), stddevs.getData()[0]);
+        stddevs.getData()[1] = Math.max(Centimeters.of(1).in(Meters), stddevs.getData()[1]);
+        stddevs.getData()[2] = Math.max(Degrees.of(0.25).in(Radians), stddevs.getData()[2]);
 
         double totalPenalty = 1;
-        if (Math.hypot(drivetrain.getState().Speeds.vxMetersPerSecond,
-                drivetrain.getState().Speeds.vxMetersPerSecond) > 0.02 ||
-                Math.abs(drivetrain.getState().Speeds.omegaRadiansPerSecond) > Units.degreesToRadians(2)) {
+        if (Math.hypot(drivetrain.getState().Speeds.vxMetersPerSecond, drivetrain.getState().Speeds.vxMetersPerSecond) >
+                0.02 ||
+            Math.abs(drivetrain.getState().Speeds.omegaRadiansPerSecond) > Units.degreesToRadians(2)) {
             totalPenalty = applyPenalties(estimate);
         }
         estimateTable.sub("penalties").set("total", totalPenalty);
 
         stddevs = stddevs.times(totalPenalty);
         if (!check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(),
-                "(stddevs) angular velocity")) {
+                   "(stddevs) angular velocity")) {
             stddevs.getData()[2] = 99999;
         }
 
-        estimateTable.set(
-                "stddevs",
-                new Pose2d(
-                        stddevs.getData()[0],
-                        stddevs.getData()[1],
-                        Rotation2d.fromRadians(stddevs.getData()[2])));
+        estimateTable.set("stddevs", new Pose2d(stddevs.getData()[0], stddevs.getData()[1],
+                                                Rotation2d.fromRadians(stddevs.getData()[2])));
         estimateTable.set("pose", estimate.pose2d);
 
         estimateTable.set("timestamp", estimate.timestamp);
 
-        drivetrain.addVisionMeasurement(
-                estimate.pose2d,
-                estimate.timestamp,
-                stddevs);
+        drivetrain.addVisionMeasurement(estimate.pose2d, estimate.timestamp, stddevs);
     }
 }
