@@ -5,8 +5,8 @@ PS4=$'F \t$EPOCHREALTIME\t '
 
 cd $(git rev-parse --show-toplevel)
 
-git stash push --quiet
-trap "git stash pop --quiet" exit
+response="$(git stash push)"
+[[ "$response" = "No local changes to save" ]] || trap "git stash pop --quiet" exit
 
 files=$(find . -name '*.java' -type f)
 [[ -z "$files" ]] && exit 0
