@@ -6,42 +6,42 @@
 
 package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volts;
+import static org.wpilib.units.Units.Degrees;
+import static org.wpilib.units.Units.DegreesPerSecond;
+import static org.wpilib.units.Units.Radians;
+import static org.wpilib.units.Units.RotationsPerSecond;
+import static org.wpilib.units.Units.Second;
+import static org.wpilib.units.Units.Volts;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.controller.ArmFeedforward;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
+import org.wpilib.math.controller.ArmFeedforward;
+import org.wpilib.units.measure.Angle;
+import org.wpilib.units.measure.AngularVelocity;
+import org.wpilib.wpilibj.DigitalInput;
+import org.wpilib.wpilibj.smartdashboard.SmartDashboard;
+import org.wpilib.wpilibj2.command.Command;
+import org.wpilib.wpilibj2.command.Commands;
+import org.wpilib.wpilibj2.command.SubsystemBase;
+import org.wpilib.wpilibj2.command.button.Trigger;
+import org.wpilib.wpilibj2.command.sysid.SysIdRoutine;
+import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Config;
+import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
 import frc.robot.PartialRobot;
 import frc.robot.constants.Constants;
 import frc.robot.constants.IntakeConstants;
 
-public class IntakeSubsystem extends SubsystemBase {
+public class IntakeMechanism extends SubsystemBase {
     private final TalonFX intakeSlapdown = new TalonFX(Constants.INTAKE_SLAPDOWN_TALONFX_ID);
     private final TalonFX intakeRoller = new TalonFX(Constants.INTAKE_ROLLER_TALONFX_ID);
     private final ArmFeedforward ff = new ArmFeedforward(IntakeConstants.KS, IntakeConstants.KG, IntakeConstants.KV);
     private final DigitalInput hallLimit = new DigitalInput(Constants.INTAKE_LIMIT_PIN);
 
-    public IntakeSubsystem() {
+    public IntakeMechanism() {
         super();
         TalonFXConfiguration rollerConfig = new TalonFXConfiguration();
         rollerConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -132,7 +132,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public Trigger limitEngaged = new Trigger(() -> !hallLimit.get());
 
     public static class Tester extends PartialRobot {
-        private final IntakeSubsystem intake = new IntakeSubsystem();
+        private final IntakeMechanism intake = new IntakeMechanism();
 
         public Tester() {
             super();
@@ -148,5 +148,4 @@ public class IntakeSubsystem extends SubsystemBase {
         }
     }
 }
-
- */   
+*/

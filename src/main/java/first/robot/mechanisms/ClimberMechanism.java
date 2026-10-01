@@ -10,7 +10,7 @@ import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import org.wpilib.wpilibj.smartdashboard.SmartDashboard;
 import first.robot.constants.CANIds;
 import frc.robot.PartialRobot;
 import frc.robot.constants.ClimberConstants;
