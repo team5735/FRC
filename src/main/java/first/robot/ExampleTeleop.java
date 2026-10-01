@@ -11,10 +11,7 @@ import org.wpilib.opmode.Teleop;
 public class ExampleTeleop implements OpMode {
     private Robot robot;
 
-    public ExampleTeleop(Robot robot) {
-        this.robot = robot;
-    }
+    public ExampleTeleop(Robot robot) { this.robot = robot; }
 
-    private void driverBindings() {
-    }
+    private void driverBindings() {}
 }

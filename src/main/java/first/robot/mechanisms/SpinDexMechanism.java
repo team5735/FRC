@@ -1,19 +1,16 @@
 package frc.robot.subsystems;
 
+import com.revrobotics.spark.SparkFlex;
+import first.robot.Robot;
+import first.robot.constants.CANIds;
+import first.robot.util.NTable;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.drive.RobotDriveBase.MotorType;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-
-import com.revrobotics.spark.SparkFlex;
-
-import first.robot.Robot;
-import first.robot.constants.CANIds;
-import first.robot.util.NTable;
 
 public class SpinDexMechanism implements Mechanism {
     public final SparkFlex feedVortex = new SparkFlex(CANIds.SPINDEX_FEED_VORTEX_ID, MotorType.kBrushless);
@@ -39,79 +36,78 @@ public class SpinDexMechanism implements Mechanism {
     }
 
     @Override
-    public void periodic(){
+    public void periodic() {
         SmartDashboard.putNumber("spindex/wheel_output", wheelVortex.getAppliedOutput());
     }
 
-    public void runFeeder() {
-        feedVortex.setVoltage(table.getDouble("feed"));
-    }
+    public void runFeeder() { feedVortex.setVoltage(table.getDouble("feed")); }
 
-    public void reverseFeeder() {
-        feedVortex.setVoltage(-table.getDouble("feed"));
-    }
+    public void reverseFeeder() { feedVortex.setVoltage(-table.getDouble("feed")); }
 
-    public void stopFeeder() {
-        feedVortex.setVoltage(0);
-    }
+    public void stopFeeder() { feedVortex.setVoltage(0); }
 
-    public double getForwardVoltage(){
-        return table.getDouble("wheel: fwd");
-    }
+    public double getForwardVoltage() { return table.getDouble("wheel: fwd"); }
 
-    public void runWheel() {
-        wheelVortex.setVoltage(table.getDouble("wheel: fwd"));
-    }
+    public void runWheel() { wheelVortex.setVoltage(table.getDouble("wheel: fwd")); }
 
-    public void stopWheel() {
-        wheelVortex.setVoltage(0);
-    }
+    public void stopWheel() { wheelVortex.setVoltage(0); }
 
-    public void reverseWheel() {
-        wheelVortex.setVoltage(table.getDouble("wheel: bck"));
-    }
+    public void reverseWheel() { wheelVortex.setVoltage(table.getDouble("wheel: bck")); }
 
     public Command getRun() {
-        return startEnd(() -> {
-            runWheel();
-            runFeeder();
-        }, () -> {
-            stopWheel();
-            stopFeeder();
-        });
+        return startEnd(
+            ()
+                -> {
+                runWheel();
+                runFeeder();
+            },
+            () -> {
+                stopWheel();
+                stopFeeder();
+            });
     }
 
     public Command getRunSupplier(Supplier<Double> wheel, Supplier<Double> feeder) {
-        return startEnd(() -> {
-            wheelVortex.setVoltage(wheel.get());
-            feedVortex.setVoltage(feeder.get());
-        }, () -> {
-            stopWheel();
-            stopFeeder();
-        });
+        return startEnd(
+            ()
+                -> {
+                wheelVortex.setVoltage(wheel.get());
+                feedVortex.setVoltage(feeder.get());
+            },
+            () -> {
+                stopWheel();
+                stopFeeder();
+            });
     }
 
     public Command getInformedRun(BooleanSupplier isValid) {
-        return runEnd(() -> {
-            if (isValid.getAsBoolean()) {
-                runWheel();
-            } else {
-                stopWheel();
-            }
-        }, () -> {
-            stopWheel();
-            stopFeeder();
-        }).beforeStarting(this::runFeeder);
+        return runEnd(
+                   ()
+                       -> {
+                       if (isValid.getAsBoolean()) {
+                           runWheel();
+                       } else {
+                           stopWheel();
+                       }
+                   },
+                   () -> {
+                       stopWheel();
+                       stopFeeder();
+                   })
+            .beforeStarting(this::runFeeder);
     }
 
     public Command getBackwards() {
-        return startEnd(() -> {
-            reverseWheel();
-            reverseFeeder();
-        }, () -> {
-            stopWheel();
-            stopFeeder();
-        });
+        return startEnd(
+            ()
+                -> {
+                reverseWheel();
+                reverseFeeder();
+            },
+            () -> {
+                stopWheel();
+                stopFeeder();
+            });
     }
 
     @Utility

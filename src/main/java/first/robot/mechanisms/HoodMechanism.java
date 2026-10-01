@@ -1,7 +1,9 @@
 package first.robot.mechanisms;
 
+import first.robot.Robot;
+import first.robot.constants.HoodConstants;
+import first.robot.constants.PinIds;
 import java.util.function.Supplier;
-
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;
 import org.wpilib.hardware.discrete.PWM;
@@ -12,10 +14,6 @@ import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
-
-import first.robot.Robot;
-import first.robot.constants.HoodConstants;
-import first.robot.constants.PinIds;
 
 public class HoodMechanism implements Mechanism, TelemetryLoggable {
     private final PWM servo = new PWM(PinIds.HOOD_SERVO_PIN);
@@ -50,74 +48,60 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
         // this.feedback.setAverageBits(4);
     }
 
-    public double getServoSetpoint() {
-        return servo.getPulseTimeMicroseconds();
-    }
+    public double getServoSetpoint() { return servo.getPulseTimeMicroseconds(); }
 
     public void setServoPosition(double pos) {
         // todo: should log warning if incoming pos is out of range
         pos = Math.clamp(pos, 0.0, 1.0);
-        this.servo.setPulseTimeMicroseconds((int) (pos * 4096));
+        this.servo.setPulseTimeMicroseconds((int)(pos * 4096));
     }
 
     public double getHoodPosition() {
-        return interp1(
-                HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
-                0.0, 1.0,
-                this.getServoSetpoint());
+        return interp1(HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION, 0.0, 1.0,
+                       this.getServoSetpoint());
     }
 
     public void setHoodPosition(double hoodPosition) {
-        double servoPosition = interp1(
-                0, 1,
-                HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
-                hoodPosition);
+        double servoPosition =
+            interp1(0, 1, HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION, hoodPosition);
         this.setServoPosition(servoPosition);
     }
 
     public double getHoodAngle() {
-        return interp1(
-                HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
-                HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
-                this.getServoSetpoint());
+        return interp1(HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
+                       HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
+                       this.getServoSetpoint());
     }
 
     public void setHoodAngle(double hoodAngleDegrees) {
-        double servoPosition = interp1(
-                HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
-                HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
-                hoodAngleDegrees);
+        double servoPosition =
+            interp1(HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
+                    HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION, hoodAngleDegrees);
 
         this.setServoPosition(servoPosition);
     }
 
     public void exzSaveServoPosition() {
-        this.exclusionZoneSavedServoPosition = this.servo.getPulseTimeMicroseconds()
-                / (double) HoodConstants.PWM_US_RANGE;
+        this.exclusionZoneSavedServoPosition =
+            this.servo.getPulseTimeMicroseconds() / (double)HoodConstants.PWM_US_RANGE;
     }
 
-    public double exzGetSavedServoPosition() {
-        return exclusionZoneSavedServoPosition;
-    }
+    public double exzGetSavedServoPosition() { return exclusionZoneSavedServoPosition; }
 
     // Returns raw voltage from analog feedback wire
-    public double getVoltage() {
-        return feedback.getVoltage();
-    }
+    public double getVoltage() { return feedback.getVoltage(); }
 
     // Converts voltage (0-5V) into 0.0–1.0 normalized position
     public double getNormalizedPosition() {
         double v = this.getVoltage();
-        return interp1(
-                HoodConstants.SERVO_VOLTAGE_AT_REF0, HoodConstants.SERVO_VOLTAGE_AT_REF1,
-                HoodConstants.SERVO_VOLTAGE_REF0, HoodConstants.SERVO_VOLTAGE_REF1,
-                v);
+        return interp1(HoodConstants.SERVO_VOLTAGE_AT_REF0, HoodConstants.SERVO_VOLTAGE_AT_REF1,
+                       HoodConstants.SERVO_VOLTAGE_REF0, HoodConstants.SERVO_VOLTAGE_REF1, v);
     }
 
     public double getNormalizedAngle() {
         return interp1(HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
-                HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
-                getNormalizedPosition());
+                       HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES,
+                       getNormalizedPosition());
     }
 
     @Override
@@ -140,8 +124,7 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
     // This is a full robot config for testing the hood subsystem
     @Utility
     public static class Tester implements OpMode {
-        private final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(),
-                FieldConstants.HOOD_EXCLUSION_ZONES);
+        private final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(), FieldConstants.HOOD_EXCLUSION_ZONES);
 
         private double lastPos = 0.6;
 
@@ -155,15 +138,17 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
             robot.port0.b().onTrue(hood.run(_ -> hood.setHoodPosition(0.0)).named("set hood position to 0.0"));
 
             robot.port0.x().onTrue(hood.run(_ -> {
-                lastPos += 0.025;
-                lastPos = Math.clamp(lastPos, 0.0, 1.0);
-                hood.setServoPosition(lastPos);
-            }).named("nudge up"));
+                                           lastPos += 0.025;
+                                           lastPos = Math.clamp(lastPos, 0.0, 1.0);
+                                           hood.setServoPosition(lastPos);
+                                       })
+                                       .named("nudge up"));
             robot.port0.a().onTrue(hood.run(_ -> {
-                lastPos -= 0.025;
-                lastPos = Math.clamp(lastPos, 0.0, 1.0);
-                hood.setServoPosition(lastPos);
-            }).named("nudge down"));
+                                           lastPos -= 0.025;
+                                           lastPos = Math.clamp(lastPos, 0.0, 1.0);
+                                           hood.setServoPosition(lastPos);
+                                       })
+                                       .named("nudge down"));
         }
     };
 }

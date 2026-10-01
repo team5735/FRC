@@ -17,7 +17,9 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-
+import frc.robot.PartialRobot;
+import frc.robot.constants.Constants;
+import frc.robot.constants.IntakeConstants;
 import org.wpilib.math.controller.ArmFeedforward;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
@@ -31,9 +33,6 @@ import org.wpilib.wpilibj2.command.sysid.SysIdRoutine;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Config;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
-import frc.robot.PartialRobot;
-import frc.robot.constants.Constants;
-import frc.robot.constants.IntakeConstants;
 
 public class IntakeMechanism extends SubsystemBase {
     private final TalonFX intakeSlapdown = new TalonFX(Constants.INTAKE_SLAPDOWN_TALONFX_ID);
@@ -126,7 +125,8 @@ public class IntakeMechanism extends SubsystemBase {
         SmartDashboard.putBoolean("intake/limit_engaged", !hallLimit.get());
         SmartDashboard.putNumber("intake/slapdown_volts", intakeSlapdown.getMotorVoltage().getValueAsDouble());
         SmartDashboard.putNumber("intake/slapdown_pos_deg", getSlapdownPosition().in(Degrees));
-        SmartDashboard.putNumber("intake/slapdown_vel_dps", intakeSlapdown.getVelocity().getValue().in(DegreesPerSecond));
+        SmartDashboard.putNumber("intake/slapdown_vel_dps",
+intakeSlapdown.getVelocity().getValue().in(DegreesPerSecond));
     }
 
     public Trigger limitEngaged = new Trigger(() -> !hallLimit.get());
@@ -137,7 +137,7 @@ public class IntakeMechanism extends SubsystemBase {
         public Tester() {
             super();
             intake.limitEngaged.onTrue(intake.zeroSlapdownPosition());
-            
+
             controller.rightBumper().whileTrue(intake.getLiftCommand());
             controller.leftBumper().whileTrue(intake.getSlapdownCommand());
 
