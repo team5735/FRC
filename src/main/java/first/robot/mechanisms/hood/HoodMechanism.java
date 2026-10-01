@@ -1,4 +1,4 @@
-package first.robot.mechanisms;
+package first.robot.mechanisms.hood;
 
 import first.robot.Robot;
 import first.robot.constants.HoodConstants;

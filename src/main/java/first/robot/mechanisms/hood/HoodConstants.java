@@ -1,4 +1,4 @@
-package first.robot.constants;
+package first.robot.mechanisms.hood;
 
 public class HoodConstants {
     // To tune the hood:

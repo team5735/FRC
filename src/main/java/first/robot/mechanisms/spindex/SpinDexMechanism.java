@@ -1,4 +1,6 @@
-package frc.robot.subsystems;
+// Currently, there is no 2027 library for CTRE devices.
+/*
+package first.robot.mechanisms.spindex;
 
 import com.revrobotics.spark.SparkFlex;
 import first.robot.Robot;
@@ -121,3 +123,4 @@ public class SpinDexMechanism implements Mechanism {
         }
     }
 }
+*/

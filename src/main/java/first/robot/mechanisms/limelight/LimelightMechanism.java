@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package first.robot.mechanisms;
+package first.robot.mechanisms.limelight;
 
 import static org.wpilib.units.Units.Centimeters;
 import static org.wpilib.units.Units.Degrees;
