@@ -1,36 +1,33 @@
-package frc.robot.subsystems;
+package first.robot.mechanisms.turret;
 
-import static edu.wpi.first.units.Units.Amps;
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.constants.TurretConstants.DYNAMIC_TOLERANCE;
-import static frc.robot.constants.TurretConstants.FORWARD_LIMIT_TUR_REL;
-import static frc.robot.constants.TurretConstants.HALL_LIMIT_POS_BOT_REL;
-import static frc.robot.constants.TurretConstants.KA;
-import static frc.robot.constants.TurretConstants.KD;
-import static frc.robot.constants.TurretConstants.KI;
-import static frc.robot.constants.TurretConstants.KP;
-import static frc.robot.constants.TurretConstants.KS;
-import static frc.robot.constants.TurretConstants.KV;
-import static frc.robot.constants.TurretConstants.MAX_ACC;
-import static frc.robot.constants.TurretConstants.MAX_VEL;
-import static frc.robot.constants.TurretConstants.REVERSE_LIMIT_TUR_REL;
-import static frc.robot.constants.TurretConstants.SOFT_PADDING;
-import static frc.robot.constants.TurretConstants.START_POS_BOT_REL;
-import static frc.robot.constants.TurretConstants.TOLERANCE;
-import static frc.robot.constants.TurretConstants.formatInputPosRobotRel;
-import static frc.robot.constants.TurretConstants.formatInputStateRobotRel;
-import static frc.robot.constants.TurretConstants.isInDeadZone;
-import static frc.robot.constants.TurretConstants.robotRelToTurretRel;
-import static frc.robot.constants.TurretConstants.turretRelToRobotRel;
+import static org.wpilib.units.Units.Amps;
+import static org.wpilib.units.Units.Degrees;
+import static org.wpilib.units.Units.Radians;
+import static org.wpilib.units.Units.Rotations;
+import static org.wpilib.units.Units.RotationsPerSecond;
+import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
+import static org.wpilib.units.Units.Second;
+import static org.wpilib.units.Units.Volts;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+
+import org.wpilib.command3.Command;
+import org.wpilib.command3.Mechanism;
+import org.wpilib.command3.Trigger;
+import org.wpilib.driverstation.DriverStation;
+import org.wpilib.hardware.discrete.DigitalInput;
+import org.wpilib.hardware.hal.SimDevice.Direction;
+import org.wpilib.math.controller.ProfiledPIDController;
+import org.wpilib.math.controller.SimpleMotorFeedforward;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.util.Units;
+import org.wpilib.telemetry.Telemetry;
+import org.wpilib.units.measure.Angle;
+import org.wpilib.units.measure.AngularVelocity;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
@@ -41,41 +38,17 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
+import first.robot.util.NTable;
 import frc.robot.PartialRobot;
-import frc.robot.Telemetry;
 import frc.robot.commands.LaunchCalculator;
 import frc.robot.commands.LaunchCalculator.LaunchGoal;
-import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.robot.CompbotConstants;
 import frc.robot.constants.robot.CompbotTunerConstants;
 import frc.robot.constants.robot.RobotConstants;
-import frc.robot.util.NTable;
 import frc.robot.util.TunableProfiledPIDController;
 
-public class TurretSubsystem extends SubsystemBase {
+public class TurretMechanism implements Mechanism {
     private final TalonFX kraken = new TalonFX(Constants.TURRET_MOTOR_ID);
     private final DigitalInput hallLimit = new DigitalInput(Constants.TURRET_LIMIT_PIN);
 
@@ -93,7 +66,7 @@ public class TurretSubsystem extends SubsystemBase {
 
     private Supplier<Boolean> turretEnabled;
 
-    public TurretSubsystem(Supplier<Pose2d> robotPoseSupplier, RobotConstants driveConstants,
+    public TurretMechanism(Supplier<Pose2d> robotPoseSupplier, RobotConstants driveConstants,
             Supplier<Boolean> turretEnabled) {
         super();
         this.driveConstants = driveConstants;
@@ -469,7 +442,7 @@ public class TurretSubsystem extends SubsystemBase {
      * Non-requiring {@link Command} that simply zeroes the position of this
      * subsytem to that of its Hall-Effect limit switch being engaged
      * <p>
-     * This is intended to be bound to {@link TurretSubsystem#limitTrigger} and used
+     * This is intended to be bound to {@link TurretMechanism#limitTrigger} and used
      * by very little else.
      *
      * @return a Command generated with {@link Commands#runOnce()} that sets this
@@ -492,7 +465,7 @@ public class TurretSubsystem extends SubsystemBase {
     }
 
     public static class Tester extends PartialRobot {
-        private final TurretSubsystem turret = new TurretSubsystem(() -> Pose2d.kZero, new CompbotConstants(),
+        private final TurretMechanism turret = new TurretMechanism(() -> Pose2d.kZero, new CompbotConstants(),
                 () -> true);
 
         public Tester() {
@@ -529,73 +502,4 @@ public class TurretSubsystem extends SubsystemBase {
             }
         }
     }
-
-    public static class AimingTest extends PartialRobot {
-        private final DrivetrainSubsystem drivetrain = CompbotTunerConstants.createDrivetrain();
-        private final TurretSubsystem turret = new TurretSubsystem(drivetrain::getEstimatedPosition,
-                drivetrain.constants, () -> true);
-
-        public final Telemetry logger = new Telemetry(drivetrain, turret);
-
-        private final LimelightSubsystem[] limelights = { new LimelightSubsystem(drivetrain, "limelight-fone"),
-                new LimelightSubsystem(drivetrain, "limelight-ftwo") };
-
-        public AimingTest() {
-            super();
-
-            drivetrain.registerTelemetry(logger::telemeterize);
-
-            turret.zeroTrigger.onTrue(turret.zeroCommand());
-
-            drivetrain.setDefaultCommand(
-                    drivetrain.joystickDriveCommand(
-                            () -> controller.getLeftX(),
-                            () -> controller.getLeftY(),
-                            () -> controller.getLeftTriggerAxis(),
-                            () -> controller.getRightTriggerAxis(),
-                            () -> controller.getHID().getYButton(),
-                            () -> controller.getHID().getStartButton()));
-
-            controller.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
-            controller.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
-            controller.rightBumper().whileTrue(turret.trackRobotRel(() -> {
-                double x = controller.getRightX();
-                double y = controller.getRightY();
-                return new Rotation2d(-y, -x).getMeasure();
-            }));
-            controller.leftBumper()
-                    .whileTrue(LaunchCalculator.dryAimTurret(LaunchGoal.SCORE, turret, drivetrain));
-
-            controller.x().whileTrue(turret.zeroSequence());
-            controller.povUp().whileTrue(turret.sysId());
-            controller.povDown().onTrue(Commands.runOnce(turret::remakePID, turret));
-
-            for (LimelightSubsystem limelight : limelights) {
-                limelight.setIMUToPigeon();
-            }
-        }
-
-        @Override
-        public void teleopInit() {
-            if (!turret.getZeroStatus()) {
-                CommandScheduler.getInstance().schedule(turret.zeroSequence());
-            }
-
-            for (LimelightSubsystem limelight : limelights) {
-                limelight.setIMUMode(3);
-            }
-        }
-
-        @Override
-        public void autonomousInit() {
-            if (!turret.getZeroStatus()) {
-                CommandScheduler.getInstance().schedule(turret.zeroSequence());
-            }
-
-            for (LimelightSubsystem limelight : limelights) {
-                limelight.setIMUMode(3);
-            }
-        }
-    }
-
 }
