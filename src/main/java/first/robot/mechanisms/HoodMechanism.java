@@ -1,27 +1,24 @@
-package frc.robot.subsystems;
-
-import static edu.wpi.first.units.Units.Degrees;
+package first.robot.mechanisms;
 
 import java.util.function.Supplier;
 
-import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;
+import org.wpilib.hardware.discrete.PWM;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.shape.Rectangle2d;
 import org.wpilib.math.util.MathUtil;
-import org.wpilib.units.measure.Angle;
+import org.wpilib.opmode.OpMode;
+import org.wpilib.opmode.Utility;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
 
-import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import first.robot.Robot;
+import first.robot.constants.HoodConstants;
 import first.robot.constants.PinIds;
-import frc.robot.PartialRobot;
-import frc.robot.constants.FieldConstants;
-import frc.robot.constants.HoodConstants;
 
-public class HoodMechanism implements Mechanism {
-    private final Servo servo = new Servo(PinIds.HOOD_SERVO_PIN);
+public class HoodMechanism implements Mechanism, TelemetryLoggable {
+    private final PWM servo = new PWM(PinIds.HOOD_SERVO_PIN);
     private final AnalogInput feedback = new AnalogInput(PinIds.HOOD_FEEDBACK_PIN);
 
     private Supplier<Pose2d> turretPoseSupplier;
@@ -54,14 +51,13 @@ public class HoodMechanism implements Mechanism {
     }
 
     public double getServoSetpoint() {
-        return servo.get();
+        return servo.getPulseTimeMicroseconds();
     }
 
     public void setServoPosition(double pos) {
         // todo: should log warning if incoming pos is out of range
-        pos = MathUtil.clamp(pos, 0.0, 1.0);
-        this.servo.set(pos);
-        this.sendTelemetry();
+        pos = Math.clamp(pos, 0.0, 1.0);
+        this.servo.setPulseTimeMicroseconds((int) (pos * 4096));
     }
 
     public double getHoodPosition() {
@@ -96,7 +92,8 @@ public class HoodMechanism implements Mechanism {
     }
 
     public void exzSaveServoPosition() {
-        this.exclusionZoneSavedServoPosition = this.servo.get();
+        this.exclusionZoneSavedServoPosition = this.servo.getPulseTimeMicroseconds()
+                / (double) HoodConstants.PWM_US_RANGE;
     }
 
     public double exzGetSavedServoPosition() {
@@ -123,12 +120,13 @@ public class HoodMechanism implements Mechanism {
                 getNormalizedPosition());
     }
 
-    public void sendTelemetry() {
-        SmartDashboard.putNumber("hood/hood_position", this.getHoodPosition());
-        SmartDashboard.putNumber("hood/servo_position", this.getServoSetpoint());
-        SmartDashboard.putNumber("hood/servo_feedback_voltage", this.getVoltage());
-        SmartDashboard.putNumber("hood/servo_feedback_position", getNormalizedPosition());
-        SmartDashboard.putNumber("hood/hood_angle_degrees", this.getHoodAngle());
+    @Override
+    public void logTo(TelemetryTable table) {
+        table.log("position", this.getHoodPosition());
+        table.log("angle_degrees", this.getHoodAngle());
+        table.log("servo/position", this.getServoSetpoint());
+        table.log("servo/feedback_voltage", this.getVoltage());
+        table.log("servo/feedback_position", getNormalizedPosition());
     }
 
     public boolean isInExclusionZone() {
@@ -139,48 +137,33 @@ public class HoodMechanism implements Mechanism {
         return false;
     }
 
-    public Command getDynamicTracking(Supplier<Angle> angleSupplier) {
-        return run(() -> setHoodAngle(angleSupplier.get().in(Degrees)));
-    }
-    public Command setHoodPosition180(double hoodPosition) {
-        return runOnce(() -> setHoodPosition(hoodPosition));
-    }
-
-    @Override
-    public void periodic() {
-        this.sendTelemetry();
-    }
-
     // This is a full robot config for testing the hood subsystem
-    public static class Tester extends PartialRobot {
+    @Utility
+    public static class Tester implements OpMode {
         private final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(),
                 FieldConstants.HOOD_EXCLUSION_ZONES);
 
         private double lastPos = 0.6;
 
-        public Tester() {
+        private Robot robot;
+
+        public Tester(Robot robot) {
             super();
+            this.robot = robot;
 
-            controller.y().onTrue(hood.runOnce(() -> hood.setHoodPosition(1.0)));
-            controller.b().onTrue(hood.runOnce(() -> hood.setHoodPosition(0.0)));
+            robot.port0.y().onTrue(hood.run(_ -> hood.setHoodPosition(1.0)).named("set hood position to 1.0"));
+            robot.port0.b().onTrue(hood.run(_ -> hood.setHoodPosition(0.0)).named("set hood position to 0.0"));
 
-            controller.x().onTrue(hood.runOnce(() -> {
+            robot.port0.x().onTrue(hood.run(_ -> {
                 lastPos += 0.025;
-                lastPos = MathUtil.clamp(lastPos, 0.0, 1.0);
+                lastPos = Math.clamp(lastPos, 0.0, 1.0);
                 hood.setServoPosition(lastPos);
-            }));
-            controller.a().onTrue(hood.runOnce(() -> {
+            }).named("nudge up"));
+            robot.port0.a().onTrue(hood.run(_ -> {
                 lastPos -= 0.025;
-                lastPos = MathUtil.clamp(lastPos, 0.0, 1.0);
+                lastPos = Math.clamp(lastPos, 0.0, 1.0);
                 hood.setServoPosition(lastPos);
-            }));
+            }).named("nudge down"));
         }
-
-        @Override
-        public void robotPeriodic() {
-            this.hood.sendTelemetry();
-            super.robotPeriodic();
-        }
-
     };
 }
