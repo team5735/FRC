@@ -13,7 +13,7 @@ files=$(find . -name '*.java' -type f)
 <<<"$files" xargs clang-format --style="file:./.clang-format" -i
 
 modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut --bytes 4-)"
-[[ -z "$modified" ]] && exit 0
+[[ -z "$modified" ]] && echo nothing formatted && exit 0
 [[ "$1" == "--check" ]] && exit 1
 count=$(<<<"$modified" wc -l)
 
