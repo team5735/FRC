@@ -27,27 +27,27 @@ public class TurretConstants {
 
     public static final AngularVelocity MAX_VEL = RotationsPerSecond.of(1.5);
     public static final AngularAcceleration MAX_ACC = RotationsPerSecondPerSecond.of(7.5);
-    public static final TrapezoidProfile.Constraints CONSTRAINTS = new TrapezoidProfile.Constraints(
-            MAX_VEL.in(RotationsPerSecond), MAX_ACC.in(RotationsPerSecondPerSecond));
+    public static final TrapezoidProfile.Constraints CONSTRAINTS =
+        new TrapezoidProfile.Constraints(MAX_VEL.in(RotationsPerSecond), MAX_ACC.in(RotationsPerSecondPerSecond));
 
     // Imaginary, robot-relative hard stops for the turret; all setpoints are to be
     // within a set padding of these
-    
-    //TEMP!!!
-    public static final Angle REVERSE_LIMIT_BOT_REL = Rotations.of(0.58); // limit the turret would hit whild driving
-                                                                          // CW
+
+    // TEMP!!!
+    public static final Angle REVERSE_LIMIT_BOT_REL = Rotations.of(0.58);   // limit the turret would hit whild driving
+                                                                            // CW
     public static final Angle FORWARD_LIMIT_BOT_REL = Rotations.of(0.3045); // limit the turret would hit while driving
-                                                                            // CCW 
+                                                                            // CCW
     public static final Angle HALL_LIMIT_POS_BOT_REL = Rotations.of(0.302);
-    public static final Angle ZERO_OFFSET = Rotations
-            .of((REVERSE_LIMIT_BOT_REL.in(Rotations) + FORWARD_LIMIT_BOT_REL.in(Rotations)) / 2);
+    public static final Angle ZERO_OFFSET =
+        Rotations.of((REVERSE_LIMIT_BOT_REL.in(Rotations) + FORWARD_LIMIT_BOT_REL.in(Rotations)) / 2);
 
     public static final Angle REVERSE_LIMIT_TUR_REL = REVERSE_LIMIT_BOT_REL.minus(ZERO_OFFSET);
     public static final Angle FORWARD_LIMIT_TUR_REL = Rotations.of(1).minus(REVERSE_LIMIT_TUR_REL);
 
     public static final Angle SOFT_PADDING = Rotations.of(0.05);
-    public static final Angle MAX_DECEL_PADDING = Rotations.of(MAX_VEL.in(RotationsPerSecond)
-            * MAX_VEL.in(RotationsPerSecond) / (MAX_ACC.in(RotationsPerSecondPerSecond) * 2));
+    public static final Angle MAX_DECEL_PADDING = Rotations.of(
+        MAX_VEL.in(RotationsPerSecond)*MAX_VEL.in(RotationsPerSecond) / (MAX_ACC.in(RotationsPerSecondPerSecond) * 2));
 
     public static final Angle TOLERANCE = Degrees.of(2); // Maximum tolerance of +-2º (based on field geometry)
     public static final Angle DYNAMIC_TOLERANCE = Degrees.of(5);
@@ -105,20 +105,18 @@ public class TurretConstants {
 
         if (newVel > 0) {
             if (MathUtil.isNear(softForwardLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = MathUtil.clamp(newVel, 0, Math.sqrt(
-                        maxVelRPS * maxVelRPS
-                                - 2 * MAX_ACC.in(RotationsPerSecondPerSecond)
-                                        * (newPos - softForwardLimit
-                                                + MAX_DECEL_PADDING.in(Rotations))));
+                newVel = MathUtil.clamp(newVel, 0,
+                                        Math.sqrt(maxVelRPS * maxVelRPS -
+                                                  2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
+                                                      (newPos - softForwardLimit + MAX_DECEL_PADDING.in(Rotations))));
             }
         } else if (newVel < 0) {
             if (MathUtil.isNear(softReverseLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = -MathUtil.clamp(newVel, -Math.sqrt(
-                        maxVelRPS * maxVelRPS
-                                + 2 * MAX_ACC.in(RotationsPerSecondPerSecond)
-                                        * (newPos - softReverseLimit
-                                                - MAX_DECEL_PADDING.in(Rotations))),
-                        0);
+                newVel = -MathUtil.clamp(newVel,
+                                         -Math.sqrt(maxVelRPS * maxVelRPS +
+                                                    2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
+                                                        (newPos - softReverseLimit - MAX_DECEL_PADDING.in(Rotations))),
+                                         0);
             }
         }
 
@@ -151,8 +149,7 @@ public class TurretConstants {
         return !robotRelToTurretRel(input).isNear(formatInputPosRobotRel(input), Degrees.of(0.2));
     }
 
-        public static boolean isInDynamicDeadZone(Angle input) {
+    public static boolean isInDynamicDeadZone(Angle input) {
         return !robotRelToTurretRel(input).isNear(formatInputPosRobotRel(input), DYNAMIC_TOLERANCE);
     }
-
 }

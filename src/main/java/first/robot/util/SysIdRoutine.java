@@ -1,11 +1,10 @@
 package first.robot.util;
 
+import static org.wpilib.sysid.SysIdRoutineLog.State;
 import static org.wpilib.units.Units.Seconds;
 import static org.wpilib.units.Units.Volts;
-import static org.wpilib.sysid.SysIdRoutineLog.State;
 
 import java.util.function.Consumer;
-
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Coroutine;
 import org.wpilib.command3.Mechanism;
@@ -38,15 +37,12 @@ public class SysIdRoutine {
 
         int sign;
 
-        Direction(int sign) {
-            this.sign = sign;
-        }
+        Direction(int sign) { this.sign = sign; }
     }
 
     public static record Config(Velocity<VoltageUnit> rampRate, Voltage stepVoltage, Time timeout,
-            Consumer<State> recordState, Consumer<? super Voltage> setOutput, Consumer<SysIdRoutineLog> logger,
-            String name) {
-    }
+                                Consumer<State> recordState, Consumer<? super Voltage> setOutput,
+                                Consumer<SysIdRoutineLog> logger, String name) {}
 
     public void quasistaticRun(Direction direction, Coroutine coro) {
         double outputSign = direction == Direction.FORWARD ? 1.0 : -1.0;
@@ -56,7 +52,7 @@ public class SysIdRoutine {
         timer.start();
 
         while (true) {
-            Voltage voltage = (Voltage) (this.config.rampRate.times(Seconds.of(timer.get())).times(outputSign));
+            Voltage voltage = (Voltage)(this.config.rampRate.times(Seconds.of(timer.get())).times(outputSign));
             this.config.setOutput.accept(voltage);
             this.config.logger.accept(this.logger);
             this.config.recordState.accept(state);
@@ -66,9 +62,9 @@ public class SysIdRoutine {
     }
 
     public Command quasistatic(Direction direction, String name) {
-        return this.mechanism.run(coro -> {
-            quasistaticRun(direction, coro);
-        }).whenCanceled(() -> onCancel(direction)).named(name);
+        return this.mechanism.run(coro -> { quasistaticRun(direction, coro); })
+            .whenCanceled(() -> onCancel(direction))
+            .named(name);
     }
 
     public void dynamicRun(Direction direction, Coroutine coro) {
@@ -91,8 +87,8 @@ public class SysIdRoutine {
     }
 
     public Command dynamic(Direction direction, String name) {
-        return this.mechanism.run(coro -> {
-            dynamicRun(direction, coro);
-        }).whenCanceled(() -> onCancel(direction)).named(name);
+        return this.mechanism.run(coro -> { dynamicRun(direction, coro); })
+            .whenCanceled(() -> onCancel(direction))
+            .named(name);
     }
 }

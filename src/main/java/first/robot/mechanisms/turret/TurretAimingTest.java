@@ -1,22 +1,21 @@
 package first.robot.mechanisms.turret;
 
+import first.robot.Robot;
+import first.robot.mechanisms.limelight.LimelightMechanism;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.Telemetry;
 
-import first.robot.Robot;
-import first.robot.mechanisms.limelight.LimelightMechanism;
-
 @Utility
 public class TurretAimingTest implements OpMode {
-    private final TurretMechanism turret = new TurretMechanism(drivetrain::getEstimatedPosition,
-            drivetrain.constants, () -> true);
+    private final TurretMechanism turret =
+        new TurretMechanism(drivetrain::getEstimatedPosition, drivetrain.constants, () -> true);
 
     public final Telemetry logger = new Telemetry(drivetrain, turret);
 
-    private final LimelightMechanism[] limelights = { new LimelightMechanism(drivetrain, "limelight-fone"),
-            new LimelightMechanism(drivetrain, "limelight-ftwo") };
+    private final LimelightMechanism[] limelights = {new LimelightMechanism(drivetrain, "limelight-fone"),
+                                                     new LimelightMechanism(drivetrain, "limelight-ftwo")};
     private Robot robot;
 
     public TurretAimingTest(Robot robot) {
@@ -26,14 +25,16 @@ public class TurretAimingTest implements OpMode {
 
         turret.zeroTrigger.onTrue(turret.zeroCommand());
 
-        drivetrain.setDefaultCommand(
-                drivetrain.joystickDriveCommand(
-                        () -> controller.getLeftX(),
-                        () -> controller.getLeftY(),
-                        () -> controller.getLeftTriggerAxis(),
-                        () -> controller.getRightTriggerAxis(),
-                        () -> controller.getHID().getYButton(),
-                        () -> controller.getHID().getStartButton()));
+        drivetrain.setDefaultCommand(drivetrain.joystickDriveCommand(
+            ()
+                -> controller.getLeftX(),
+            ()
+                -> controller.getLeftY(),
+            ()
+                -> controller.getLeftTriggerAxis(),
+            ()
+                -> controller.getRightTriggerAxis(),
+            () -> controller.getHID().getYButton(), () -> controller.getHID().getStartButton()));
 
         controller.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
         controller.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
@@ -42,8 +43,7 @@ public class TurretAimingTest implements OpMode {
             double y = controller.getRightY();
             return new Rotation2d(-y, -x).getMeasure();
         }));
-        controller.leftBumper()
-                .whileTrue(LaunchCalculator.dryAimTurret(LaunchGoal.SCORE, turret, drivetrain));
+        controller.leftBumper().whileTrue(LaunchCalculator.dryAimTurret(LaunchGoal.SCORE, turret, drivetrain));
 
         controller.x().whileTrue(turret.zeroSequence());
         controller.povUp().whileTrue(turret.sysId());
