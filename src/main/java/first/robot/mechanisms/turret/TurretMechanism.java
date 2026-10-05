@@ -18,6 +18,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import first.robot.util.NTable;
+import first.robot.util.SysIdRoutine;
 import frc.robot.PartialRobot;
 import frc.robot.commands.LaunchCalculator;
 import frc.robot.commands.LaunchCalculator.LaunchGoal;
@@ -39,23 +40,26 @@ import org.wpilib.math.controller.SimpleMotorFeedforward;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.trajectory.TrapezoidProfile;
 import org.wpilib.math.util.MathUtil;
 import org.wpilib.math.util.Units;
 import org.wpilib.telemetry.Telemetry;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
+import org.wpilib.units.measure.Voltage;
 
-public class TurretMechanism implements Mechanism {
+public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private final TalonFX kraken = new TalonFX(Constants.TURRET_MOTOR_ID);
     private final DigitalInput hallLimit = new DigitalInput(Constants.TURRET_LIMIT_PIN);
-
     public final Trigger limitTrigger = new Trigger(() -> !hallLimit.get());
     public final Trigger zeroTrigger = limitTrigger.and(() -> DriverStation.isDisabled());
     public boolean isZeroed = false;
 
-    private final TunableProfiledPIDController pid = new TunableProfiledPIDController(
-        "turret", KP, KI, KD, MAX_VEL.in(RotationsPerSecond), MAX_ACC.in(RotationsPerSecondPerSecond));
-    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(KS, KV, KA);
+    private final ProfiledPIDController pid = new ProfiledPIDController(TurretConstants.KP, TurretConstants.KI, TurretConstants.KD,
+        new TrapezoidProfile.Constraints(TurretConstants.MAX_VEL.in(RotationsPerSecond), TurretConstants.MAX_ACC.in(RotationsPerSecondPerSecond)));
+    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(TurretConstants.KS, TurretConstants.KV, TurretConstants.KA);
 
     private Supplier<Pose2d> robotPoseSupplier;
     private double prevVel = 0;
@@ -72,15 +76,15 @@ public class TurretMechanism implements Mechanism {
                                            .withNeutralMode(NeutralModeValue.Brake)
                                            .withInverted(InvertedValue.Clockwise_Positive));
         kraken.getConfigurator().apply(new FeedbackConfigs().withSensorToMechanismRatio(10));
-        resetAngle(START_POS_BOT_REL);
+        resetAngle(TurretConstants.START_POS_BOT_REL);
         kraken.getConfigurator().apply(new SoftwareLimitSwitchConfigs()
-                                           .withForwardSoftLimitEnable(true)
-                                           .withForwardSoftLimitThreshold(FORWARD_LIMIT_TUR_REL)
-                                           .withReverseSoftLimitEnable(true)
-                                           .withReverseSoftLimitThreshold(REVERSE_LIMIT_TUR_REL));
+                .withForwardSoftLimitEnable(true)
+                .withForwardSoftLimitThreshold(TurretConstants.FORWARD_LIMIT_TUR_REL)
+                .withReverseSoftLimitEnable(true)
+                .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL));
         kraken.getConfigurator().apply(new CurrentLimitsConfigs().withStatorCurrentLimit(Amps.of(45)));
-        pid.setup(robotRelToTurretRel(START_POS_BOT_REL).in(Rotations));
-        pid.reset(robotRelToTurretRel(START_POS_BOT_REL).in(Rotations));
+        pid.setup(robotRelToTurretRel(TurretConstants.START_POS_BOT_REL).in(Rotations));
+        pid.reset(robotRelToTurretRel(TurretConstants.START_POS_BOT_REL).in(Rotations));
         pid.setTolerance(Units.degreesToRotations(1));
         this.robotPoseSupplier = robotPoseSupplier;
         this.turretEnabled = turretEnabled;
@@ -99,7 +103,7 @@ public class TurretMechanism implements Mechanism {
         Translation2d turretToHub = closer.minus(turret);
         table.set("turret to hub", turretToHub);
 
-        Angle shouldBeAngle = turretToHub.getAngle().getMeasure();
+        Angle shouldBeAngle = turretToHub.getAngle().orElse(Rotation2d.fromDegrees(-1)).getMeasure();
         table.set("should be (deg)", shouldBeAngle.in(Degrees));
 
         Angle isAngle = this.getMechanismPose().getRotation().getMeasure();
@@ -110,58 +114,52 @@ public class TurretMechanism implements Mechanism {
     }
 
     @Override
-    public void periodic() {
-        SmartDashboard.putNumber("turret/posRots", getAngle().in(Rotations));
-        SmartDashboard.putNumber("turret/velRPS", kraken.getVelocity().getValue().in(RotationsPerSecond));
-        SmartDashboard.putNumber(
-            "turret/setpointPosRots",
-            turretRelToRobotRel(Rotations.of(pid.getController().getSetpoint().position)).in(Rotations));
-        SmartDashboard.putNumber("turret/setpointVelRPS", pid.getController().getSetpoint().velocity);
-        SmartDashboard.putNumber("turret/volts", kraken.getMotorVoltage().getValueAsDouble());
-        SmartDashboard.putNumber("turret/posErrorRots", pid.getController().getPositionError());
-        SmartDashboard.putBoolean("turret/limitEngaged", !hallLimit.get());
-        SmartDashboard.putBoolean("turret/isZeroed", isZeroed);
-        SmartDashboard.putBoolean("turret/atForwardSoftwareLimit", isAtForwardLim.getAsBoolean());
-        SmartDashboard.putBoolean("turret/atReverseSoftwareLimit", isAtReverseLim.getAsBoolean());
-        SmartDashboard.putBoolean("turret/isAtGoalPos", isAtGoalPos());
-        SmartDashboard.putNumber("turret/distance to hub", FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)
-                                                               .getDistance(this.getMechanismPose().getTranslation()));
-        SmartDashboard.putBoolean("turret/canTurnTo",
-                                  canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
+    public void logTo(TelemetryTable table) {
+        table.log("turret/posRots", getAngle().in(Rotations));
+        table.log("turret/velRPS", kraken.getVelocity().getValue().in(RotationsPerSecond));
+        table.log("turret/setpointPosRots",
+                turretRelToRobotRel(Rotations.of(pid.getSetpoint().position)).in(Rotations));
+        table.log("turret/setpointVelRPS", pid.getSetpoint().velocity);
+        table.log("turret/volts", kraken.getMotorVoltage().getValueAsDouble());
+        table.log("turret/posErrorRots", pid.getPositionError());
+        table.log("turret/limitEngaged", !hallLimit.get());
+        table.log("turret/isZeroed", isZeroed);
+        table.log("turret/atForwardSoftwareLimit", isAtForwardLim.getAsBoolean());
+        table.log("turret/atReverseSoftwareLimit", isAtReverseLim.getAsBoolean());
+        table.log("turret/isAtGoalPos", isAtGoalPos());
+        table.log("turret/distance to hub",
+                FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)
+                        .getDistance(this.getMechanismPose().getTranslation()));
+        table.log("turret/canTurnTo",
+                canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
         Telemetry.field.getObject("turret_pose").setPose(getMechanismPose());
-        SmartDashboard.putNumber("turret/statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
+        table.log("turret/statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
         aimedAtHubTelemetry();
     }
 
-    public Command hardRunForward() { return startEnd(() -> kraken.setVoltage(0.75), () -> kraken.setVoltage(0)); }
+    public Command getHardRunForward() { return run(_ -> kraken.setVoltage(0.75)).whenCanceled(() -> kraken.setVoltage(0)).named("hard run forward"); }
 
-    public Command softRunForward() { return startEnd(() -> kraken.setVoltage(0.65), () -> kraken.setVoltage(0)); }
+    public Command getSoftRunForward() { return run(_ -> kraken.setVoltage(0.65)).whenCanceled(() -> kraken.setVoltage(0)).named("soft run forward"); }
 
-    public Command softRunReverse() { return startEnd(() -> kraken.setVoltage(-0.75), () -> kraken.setVoltage(0)); }
+    public Command getSoftRunReverse() { return run(_ -> kraken.setVoltage(-0.75)).whenCanceled(() -> kraken.setVoltage(0)).named("soft run reverse"); }
 
-    public Command hardRunReverse() { return startEnd(() -> kraken.setVoltage(-1), () -> kraken.setVoltage(0)); }
+    public Command getHardRunReverse() { return run(_ -> kraken.setVoltage(-1)).whenCanceled(() -> kraken.setVoltage(0)).named("hard run reverse"); }
 
-    /**
-     * Stops the turret motor completely
-     *
-     * @return {@link Command} that sets the motor to a voltage of zero on
-     *         scheduling and does not deschedule itself unless interrupted
-     */
-    public Command stop() { return startRun(() -> kraken.setVoltage(0), () -> {}); }
+    public Command getStop() { return run(_ -> kraken.setVoltage(0)).named("stop turret"); }
 
-    private SysIdRoutine routine = new SysIdRoutine(new Config(Volts.of(0.15).per(Second), Volts.of(1), null, null),
-                                                    new Mechanism(v -> kraken.setVoltage(v.in(Volts)), log -> {
+    public final BooleanSupplier isAtForwardLim = () -> {
+        return getAngleTurretRel().gte(TurretConstants.FORWARD_LIMIT_TUR_REL.minus(TurretConstants.SOFT_PADDING));
+    };
+    public final BooleanSupplier isAtReverseLim = () -> {
+        return getAngleTurretRel().lte(TurretConstants.REVERSE_LIMIT_TUR_REL.plus(TurretConstants.SOFT_PADDING));
+    };
+
+    private SysIdRoutine routine = new SysIdRoutine(new SysIdRoutine.Config(Volts.of(0.15).per(Second), Volts.of(1), null, null, v -> kraken.setVoltage(v.in(Volts)), log -> {
                                                         log.motor("turret_motor")
                                                             .voltage(kraken.getMotorVoltage().getValue())
                                                             .angularVelocity(kraken.getVelocity().getValue())
                                                             .angularPosition(getAngleTurretRel());
-                                                    }, this));
-    public final BooleanSupplier isAtForwardLim = () -> {
-        return getAngleTurretRel().gte(FORWARD_LIMIT_TUR_REL.minus(SOFT_PADDING));
-    };
-    public final BooleanSupplier isAtReverseLim = () -> {
-        return getAngleTurretRel().lte(REVERSE_LIMIT_TUR_REL.plus(SOFT_PADDING));
-    };
+                                                    }, "turret"), this);
 
     /**
      * SysId command for this subsystem
@@ -172,12 +170,17 @@ public class TurretMechanism implements Mechanism {
      *         subsystem.
      */
     public Command sysId() {
-        return Commands.print("Starting Turret SysId")
-            .andThen(routine.dynamic(Direction.kForward).until(isAtForwardLim))
-            .andThen(routine.dynamic(Direction.kReverse).until(isAtReverseLim))
-            .andThen(routine.quasistatic(Direction.kForward).until(isAtForwardLim))
-            .andThen(routine.quasistatic(Direction.kReverse).until(isAtReverseLim))
-            .andThen(Commands.print("SysId End"));
+        return run(coro -> {
+            System.out.println("starting turret sysid");
+
+            routine.dynamicRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
+            routine.dynamicRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
+
+            routine.quasistaticRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
+            routine.quasistaticRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
+
+            System.out.println("done with turret sysid");
+        }).named("turret sysid");
     }
 
     /**

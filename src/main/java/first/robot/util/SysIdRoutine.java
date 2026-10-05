@@ -4,6 +4,7 @@ import static org.wpilib.sysid.SysIdRoutineLog.State;
 import static org.wpilib.units.Units.Seconds;
 import static org.wpilib.units.Units.Volts;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Coroutine;
@@ -44,14 +45,14 @@ public class SysIdRoutine {
                                 Consumer<State> recordState, Consumer<? super Voltage> setOutput,
                                 Consumer<SysIdRoutineLog> logger, String name) {}
 
-    public void quasistaticRun(Direction direction, Coroutine coro) {
+    public void quasistaticRun(Direction direction, Coroutine coro, BooleanSupplier until) {
         double outputSign = direction == Direction.FORWARD ? 1.0 : -1.0;
         State state = direction == Direction.FORWARD ? State.QUASISTATIC_FORWARD : State.QUASISTATIC_REVERSE;
 
         Timer timer = new Timer();
         timer.start();
 
-        while (true) {
+        while (!until.getAsBoolean()) {
             Voltage voltage = (Voltage)(this.config.rampRate.times(Seconds.of(timer.get())).times(outputSign));
             this.config.setOutput.accept(voltage);
             this.config.logger.accept(this.logger);
@@ -66,16 +67,16 @@ public class SysIdRoutine {
     }
 
     public Command quasistatic(Direction direction, String name) {
-        return this.mechanism.run(coro -> { quasistaticRun(direction, coro); })
+        return this.mechanism.run(coro -> quasistaticRun(direction, coro, () -> false))
             .whenCanceled(() -> onCancel(direction))
             .named(name);
     }
 
-    public void dynamicRun(Direction direction, Coroutine coro) {
+    public void dynamicRun(Direction direction, Coroutine coro, BooleanSupplier until) {
         Voltage output = this.config.stepVoltage.times(direction.sign);
         State state = direction == Direction.FORWARD ? State.DYNAMIC_FORWARD : State.DYNAMIC_REVERSE;
 
-        while (true) {
+        while (!until.getAsBoolean()) {
             this.config.setOutput.accept(output);
             this.config.logger.accept(this.logger);
             this.config.recordState.accept(state);
@@ -91,7 +92,7 @@ public class SysIdRoutine {
     }
 
     public Command dynamic(Direction direction, String name) {
-        return this.mechanism.run(coro -> { dynamicRun(direction, coro); })
+        return this.mechanism.run(coro -> dynamicRun(direction, coro, () -> false))
             .whenCanceled(() -> onCancel(direction))
             .named(name);
     }

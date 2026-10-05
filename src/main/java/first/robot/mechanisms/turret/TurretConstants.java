@@ -1,16 +1,15 @@
-package frc.robot.constants;
+package first.robot.mechanisms.turret;
 
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
+import static org.wpilib.units.Units.Degrees;
+import static org.wpilib.units.Units.Rotations;
+import static org.wpilib.units.Units.RotationsPerSecond;
+import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
+import org.wpilib.math.trajectory.TrapezoidProfile;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.units.measure.Angle;
+import org.wpilib.units.measure.AngularAcceleration;
+import org.wpilib.units.measure.AngularVelocity;
 
 public class TurretConstants {
     public static final double GEAR_REDUCTION = 200 / 20; // initial gear 20T, secondary gear 200T
