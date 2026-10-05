@@ -57,6 +57,10 @@ public class SysIdRoutine {
             this.config.logger.accept(this.logger);
             this.config.recordState.accept(state);
 
+            if (timer.get() > this.config.timeout.in(Seconds)) {
+                return;
+            }
+
             coro.yield();
         }
     }
