@@ -1,5 +1,6 @@
 package first.robot.util;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
@@ -7,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableEntry;
@@ -15,7 +17,13 @@ import org.wpilib.networktables.NetworkTableType;
 import org.wpilib.networktables.NetworkTableValue;
 import org.wpilib.networktables.NetworkTablesJNI;
 import org.wpilib.tunable.Tunable;
+import org.wpilib.tunable.TunableBase;
+import org.wpilib.tunable.TunableBoolean;
 import org.wpilib.tunable.TunableConfig;
+import org.wpilib.tunable.TunableDouble;
+import org.wpilib.tunable.TunableFloat;
+import org.wpilib.tunable.TunableInt;
+import org.wpilib.tunable.TunableLong;
 import org.wpilib.tunable.TunableOption;
 import org.wpilib.tunable.TunableRegistry;
 import org.wpilib.util.struct.Struct;
@@ -668,6 +676,59 @@ public class NTable {
     }
 
     public <T> Tunable<T> tunable(String name, Class<T> classType) { return tunable(name, classType, null); }
+
+    private <T extends TunableBase, U> T tunableOf(String name, Class<T> classType, U initialValue, Class<U> valueType) {
+        try {
+            Constructor<T> ctor = classType.getConstructor(valueType, TunableConfig.class);
+            T res = ctor.newInstance(initialValue, TunableConfig.of(TunableOption.ALWAYS_GET));
+            TunableRegistry.publish(getPath() + name, res);
+            return res;
+        } catch (ReflectiveOperationException e) {
+            DriverStationErrors.reportWarning("some error occurred while making a tunable of type " + classType.getCanonicalName(), true);
+            DriverStationErrors.reportWarning("error: " + e.getMessage(), e.getStackTrace());
+            return null;
+        }
+    }
+
+    public TunableInt tunableInt(String name, int initialValue) {
+        return tunableOf(name, TunableInt.class, initialValue, int.class);
+    }
+
+    public TunableLong tunableLong(String name, long initialValue) {
+        return tunableOf(name, TunableLong.class, initialValue, long.class);
+    }
+
+    public TunableFloat tunableFloat(String name, float initialValue) {
+        return tunableOf(name, TunableFloat.class, initialValue, float.class);
+    }
+
+    public TunableDouble tunableDouble(String name, double initialValue) {
+        return tunableOf(name, TunableDouble.class, initialValue, double.class);
+    }
+
+    public TunableBoolean tunableBoolean(String name, boolean initialValue) {
+        return tunableOf(name, TunableBoolean.class, initialValue, boolean.class);
+    }
+
+    public TunableInt tunableInt(String name) {
+        return tunableOf(name, TunableInt.class, 0, int.class);
+    }
+
+    public TunableLong tunableLong(String name) {
+        return tunableOf(name, TunableLong.class, 0l, long.class);
+    }
+
+    public TunableFloat tunableFloat(String name) {
+        return tunableOf(name, TunableFloat.class, 0f, float.class);
+    }
+
+    public TunableDouble tunableDouble(String name) {
+        return tunableOf(name, TunableDouble.class, 0d, double.class);
+    }
+
+    public TunableBoolean tunableBoolean(String name) {
+        return tunableOf(name, TunableBoolean.class, false, boolean.class);
+    }
 
     // listen for changes to an entry
     public <T> void listen(String name, Consumer<T> consumer, Class<T> classType) {
