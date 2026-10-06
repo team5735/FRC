@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableEntry;
@@ -677,14 +676,16 @@ public class NTable {
 
     public <T> Tunable<T> tunable(String name, Class<T> classType) { return tunable(name, classType, null); }
 
-    private <T extends TunableBase, U> T tunableOf(String name, Class<T> classType, U initialValue, Class<U> valueType) {
+    private <T extends TunableBase, U> T tunableOf(String name, Class<T> classType, U initialValue,
+                                                   Class<U> valueType) {
         try {
             Constructor<T> ctor = classType.getConstructor(valueType, TunableConfig.class);
             T res = ctor.newInstance(initialValue, TunableConfig.of(TunableOption.ALWAYS_GET));
             TunableRegistry.publish(getPath() + name, res);
             return res;
         } catch (ReflectiveOperationException e) {
-            DriverStationErrors.reportWarning("some error occurred while making a tunable of type " + classType.getCanonicalName(), true);
+            DriverStationErrors.reportWarning(
+                "some error occurred while making a tunable of type " + classType.getCanonicalName(), true);
             DriverStationErrors.reportWarning("error: " + e.getMessage(), e.getStackTrace());
             return null;
         }
@@ -710,21 +711,13 @@ public class NTable {
         return tunableOf(name, TunableBoolean.class, initialValue, boolean.class);
     }
 
-    public TunableInt tunableInt(String name) {
-        return tunableOf(name, TunableInt.class, 0, int.class);
-    }
+    public TunableInt tunableInt(String name) { return tunableOf(name, TunableInt.class, 0, int.class); }
 
-    public TunableLong tunableLong(String name) {
-        return tunableOf(name, TunableLong.class, 0l, long.class);
-    }
+    public TunableLong tunableLong(String name) { return tunableOf(name, TunableLong.class, 0l, long.class); }
 
-    public TunableFloat tunableFloat(String name) {
-        return tunableOf(name, TunableFloat.class, 0f, float.class);
-    }
+    public TunableFloat tunableFloat(String name) { return tunableOf(name, TunableFloat.class, 0f, float.class); }
 
-    public TunableDouble tunableDouble(String name) {
-        return tunableOf(name, TunableDouble.class, 0d, double.class);
-    }
+    public TunableDouble tunableDouble(String name) { return tunableOf(name, TunableDouble.class, 0d, double.class); }
 
     public TunableBoolean tunableBoolean(String name) {
         return tunableOf(name, TunableBoolean.class, false, boolean.class);
