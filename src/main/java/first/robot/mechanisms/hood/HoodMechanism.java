@@ -1,8 +1,8 @@
 package first.robot.mechanisms.hood;
 
+import first.robot.IDs;
 import first.robot.Robot;
-import first.robot.constants.HoodConstants;
-import first.robot.constants.PinIds;
+import first.robot.mechanisms.hood.HoodConstants;
 import java.util.function.Supplier;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;
@@ -16,8 +16,8 @@ import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
 
 public class HoodMechanism implements Mechanism, TelemetryLoggable {
-    private final PWM servo = new PWM(PinIds.HOOD_SERVO_PIN);
-    private final AnalogInput feedback = new AnalogInput(PinIds.HOOD_FEEDBACK_PIN);
+    private final PWM servo = new PWM(IDs.HOOD_SERVO_PIN);
+    private final AnalogInput feedback = new AnalogInput(IDs.HOOD_FEEDBACK_PIN);
 
     private Supplier<Pose2d> turretPoseSupplier;
     private Rectangle2d[] exclusionZones;
