@@ -121,8 +121,7 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
         return false;
     }
 
-    // This is a full robot config for testing the hood subsystem
-    @Utility
+    @Utility(name = "Hood Tester", group = "Testers")
     public static class Tester implements OpMode {
         private final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(), FieldConstants.HOOD_EXCLUSION_ZONES);
 

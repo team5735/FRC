@@ -6,7 +6,7 @@ import org.wpilib.command3.Scheduler;
 import org.wpilib.opmode.PeriodicOpMode;
 import org.wpilib.opmode.Utility;
 
-@Utility
+@Utility(name = "Example Mechanism Test", group = "Testers")
 public class ExampleMechanismTest extends PeriodicOpMode {
     ExampleMechanism mechanism;
 

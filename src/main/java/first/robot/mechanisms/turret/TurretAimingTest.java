@@ -7,7 +7,7 @@ import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.Telemetry;
 
-@Utility
+@Utility(name = "Turret aiming test", group = "Testers")
 public class TurretAimingTest implements OpMode {
     private final TurretMechanism turret =
         new TurretMechanism(drivetrain::getEstimatedPosition, drivetrain.constants, () -> true);

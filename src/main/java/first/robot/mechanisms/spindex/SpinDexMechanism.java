@@ -95,7 +95,7 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
         }).named("spindex informed run");
     }
 
-    @Utility
+    @Utility(name = "Spindex Tester", group = "Testers")
     public static class Tester implements OpMode {
         private final SpinDexMechanism spindex = new SpinDexMechanism();
         private Robot robot;
