@@ -1,115 +1,98 @@
-// Currently, there is no 2027 library for CTRE devices.
-/*
 package first.robot.mechanisms.spindex;
 
-import com.revrobotics.spark.SparkFlex;
-import first.robot.Robot;
-import first.robot.constants.CANIds;
-import first.robot.util.NTable;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
-import org.wpilib.drive.RobotDriveBase.MotorType;
+import org.wpilib.hardware.bus.CANPort;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
+import org.wpilib.tunable.TunableDouble;
 
-public class SpinDexMechanism implements Mechanism {
-    public final SparkFlex feedVortex = new SparkFlex(CANIds.SPINDEX_FEED_VORTEX_ID, MotorType.kBrushless);
-    public final SparkFlex wheelVortex = new SparkFlex(CANIds.SPINDEX_WHEEL_VORTEX_ID, MotorType.kBrushless);
+import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+
+import first.robot.IDs;
+import first.robot.Robot;
+import first.robot.util.NTable;
+
+public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
+    public final SparkFlex feedVortex = new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_FEED_VORTEX_ID, MotorType.kBrushless);
+    public final SparkFlex wheelVortex = new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_WHEEL_VORTEX_ID, MotorType.kBrushless);
+
     private NTable table = NTable.root("tuning").sub("spindex");
+    private TunableDouble feedVoltage = table.tunableDouble("feed", -6);
+    private TunableDouble forwardVoltage = table.tunableDouble("wheel forward voltage", -4);
+    private TunableDouble reverseVoltage = table.tunableDouble("wheel reverse voltage", 5);
 
     public SpinDexMechanism() {
         super();
 
         feedVortex.clearFaults();
         wheelVortex.clearFaults();
-
-        // ensure these values are in NT and persistent
-        // they can be changed for tuning purposes, but...
-        table.ensure("feed", -6);
-        table.ensure("wheel: fwd", -4);
-        table.ensure("wheel: bck", 5);
-
-        // they should default to these values on robot start
-        table.set("feed", -6);
-        table.set("wheel: fwd", -4);
-        table.set("wheel: bck", 5);
     }
 
     @Override
-    public void periodic() {
-        SmartDashboard.putNumber("spindex/wheel_output", wheelVortex.getAppliedOutput());
+    public void logTo(TelemetryTable table) {
+        table.log("wheel_output", wheelVortex.getAppliedOutput());
     }
 
-    public void runFeeder() { feedVortex.setVoltage(table.getDouble("feed")); }
+    public void runFeeder() { feedVortex.setVoltage(feedVoltage.get()); }
 
-    public void reverseFeeder() { feedVortex.setVoltage(-table.getDouble("feed")); }
+    public void reverseFeeder() { feedVortex.setVoltage(feedVoltage.get()); }
 
     public void stopFeeder() { feedVortex.setVoltage(0); }
 
-    public double getForwardVoltage() { return table.getDouble("wheel: fwd"); }
-
-    public void runWheel() { wheelVortex.setVoltage(table.getDouble("wheel: fwd")); }
+    public void runWheel() { wheelVortex.setVoltage(forwardVoltage.get()); }
 
     public void stopWheel() { wheelVortex.setVoltage(0); }
 
-    public void reverseWheel() { wheelVortex.setVoltage(table.getDouble("wheel: bck")); }
+    public void reverseWheel() { wheelVortex.setVoltage(reverseVoltage.get()); }
+
+    public void run() {
+        runWheel();
+        runFeeder();
+    }
+
+    public void stop() {
+        stopWheel();
+        stopFeeder();
+    }
 
     public Command getRun() {
-        return startEnd(
-            ()
-                -> {
-                runWheel();
-                runFeeder();
-            },
-            () -> {
-                stopWheel();
-                stopFeeder();
-            });
+        return run(_ -> {
+            runWheel();
+            runFeeder();
+        }).whenCanceled(() -> {
+            stopWheel();
+            stopFeeder();
+        }).named("run spindex");
     }
 
     public Command getRunSupplier(Supplier<Double> wheel, Supplier<Double> feeder) {
-        return startEnd(
-            ()
-                -> {
-                wheelVortex.setVoltage(wheel.get());
-                feedVortex.setVoltage(feeder.get());
-            },
-            () -> {
-                stopWheel();
-                stopFeeder();
-            });
+        return run(_ -> {
+            wheelVortex.setVoltage(wheel.get());
+            feedVortex.setVoltage(feeder.get());
+        }).whenCanceled(() -> {
+            stopWheel();
+            stopFeeder();
+        }).named("run spindex");
     }
 
     public Command getInformedRun(BooleanSupplier isValid) {
-        return runEnd(
-                   ()
-                       -> {
-                       if (isValid.getAsBoolean()) {
-                           runWheel();
-                       } else {
-                           stopWheel();
-                       }
-                   },
-                   () -> {
-                       stopWheel();
-                       stopFeeder();
-                   })
-            .beforeStarting(this::runFeeder);
-    }
-
-    public Command getBackwards() {
-        return startEnd(
-            ()
-                -> {
-                reverseWheel();
-                reverseFeeder();
-            },
-            () -> {
-                stopWheel();
-                stopFeeder();
-            });
+        return run(coro -> {
+            while (true) {
+                if (isValid.getAsBoolean()) runWheel();
+                else stopWheel();
+                coro.yield();
+            }
+        }).whenCanceled(() -> {
+            stopWheel();
+            stopFeeder();
+        }).named("spindex informed run");
     }
 
     @Utility
@@ -123,4 +106,3 @@ public class SpinDexMechanism implements Mechanism {
         }
     }
 }
-*/
