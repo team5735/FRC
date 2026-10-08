@@ -71,8 +71,8 @@ fi
 # transfer files
 # don't use $deploy_files here because of rsync semantics
 tic
-rsync_display_opts="--info=name,progress"
-rsync -aivP --rsh "ssh -o '$ctrl_path'" --rsync-path "$where_rsync" \
+rsync_display_opts="--info=name,progress,stats"
+rsync -aiv "$rsync_display_opts" --rsh "ssh -o '$ctrl_path'" --rsync-path "$where_rsync" \
     "$jarfile" src/main/deploy "$remote":~/test-transfer
 toc transfer
 
