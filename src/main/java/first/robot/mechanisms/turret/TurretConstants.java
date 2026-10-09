@@ -12,7 +12,7 @@ import org.wpilib.units.measure.AngularAcceleration;
 import org.wpilib.units.measure.AngularVelocity;
 
 public class TurretConstants {
-    public static final double GEAR_REDUCTION = 200 / 20; // initial gear 20T, secondary gear 200T
+    public static final double GEAR_REDUCTION = 200 / 20;  // initial gear 20T, secondary gear 200T
 
     // PID gains (with motion profiling)
     public static final double KP = 8.5;
@@ -33,10 +33,10 @@ public class TurretConstants {
     // within a set padding of these
 
     // TEMP!!!
-    public static final Angle REVERSE_LIMIT_BOT_REL = Rotations.of(0.58);   // limit the turret would hit whild driving
-                                                                            // CW
-    public static final Angle FORWARD_LIMIT_BOT_REL = Rotations.of(0.3045); // limit the turret would hit while driving
-                                                                            // CCW
+    public static final Angle REVERSE_LIMIT_BOT_REL = Rotations.of(0.58);    // limit the turret would hit whild driving
+                                                                             // CW
+    public static final Angle FORWARD_LIMIT_BOT_REL = Rotations.of(0.3045);  // limit the turret would hit while driving
+                                                                             // CCW
     public static final Angle HALL_LIMIT_POS_BOT_REL = Rotations.of(0.302);
     public static final Angle ZERO_OFFSET =
         Rotations.of((REVERSE_LIMIT_BOT_REL.in(Rotations) + FORWARD_LIMIT_BOT_REL.in(Rotations)) / 2);
@@ -46,9 +46,10 @@ public class TurretConstants {
 
     public static final Angle SOFT_PADDING = Rotations.of(0.05);
     public static final Angle MAX_DECEL_PADDING = Rotations.of(
-        MAX_VEL.in(RotationsPerSecond)*MAX_VEL.in(RotationsPerSecond) / (MAX_ACC.in(RotationsPerSecondPerSecond) * 2));
+        MAX_VEL.in(RotationsPerSecond) *MAX_VEL.in(RotationsPerSecond) / (MAX_ACC.in(RotationsPerSecondPerSecond) * 2)
+    );
 
-    public static final Angle TOLERANCE = Degrees.of(2); // Maximum tolerance of +-2º (based on field geometry)
+    public static final Angle TOLERANCE = Degrees.of(2);  // Maximum tolerance of +-2º (based on field geometry)
     public static final Angle DYNAMIC_TOLERANCE = Degrees.of(5);
 
     // Ideal robot-relative starting angle
@@ -104,18 +105,24 @@ public class TurretConstants {
 
         if (newVel > 0) {
             if (MathUtil.isNear(softForwardLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = MathUtil.clamp(newVel, 0,
-                                        Math.sqrt(maxVelRPS * maxVelRPS -
-                                                  2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
-                                                      (newPos - softForwardLimit + MAX_DECEL_PADDING.in(Rotations))));
+                newVel = MathUtil.clamp(
+                    newVel, 0,
+                    Math.sqrt(
+                        maxVelRPS * maxVelRPS - 2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
+                                                    (newPos - softForwardLimit + MAX_DECEL_PADDING.in(Rotations))
+                    )
+                );
             }
         } else if (newVel < 0) {
             if (MathUtil.isNear(softReverseLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = -MathUtil.clamp(newVel,
-                                         -Math.sqrt(maxVelRPS * maxVelRPS +
-                                                    2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
-                                                        (newPos - softReverseLimit - MAX_DECEL_PADDING.in(Rotations))),
-                                         0);
+                newVel = -MathUtil.clamp(
+                    newVel,
+                    -Math.sqrt(
+                        maxVelRPS * maxVelRPS + 2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
+                                                    (newPos - softReverseLimit - MAX_DECEL_PADDING.in(Rotations))
+                    ),
+                    0
+                );
             }
         }
 

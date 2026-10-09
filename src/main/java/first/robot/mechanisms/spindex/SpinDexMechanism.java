@@ -2,11 +2,7 @@ package first.robot.mechanisms.spindex;
 
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import first.robot.IDs;
-import first.robot.Robot;
-import first.robot.util.NTable;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
+
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.bus.CANPort;
@@ -15,6 +11,13 @@ import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.tunable.TunableDouble;
+
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+
+import first.robot.IDs;
+import first.robot.Robot;
+import first.robot.util.NTable;
 
 public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
     public final SparkFlex feedVortex = new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_FEED_VORTEX_ID, MotorType.kBrushless);
@@ -87,10 +90,8 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
     public Command getInformedRun(BooleanSupplier isValid) {
         return run(coro -> {
                    while (true) {
-                       if (isValid.getAsBoolean())
-                           runWheel();
-                       else
-                           stopWheel();
+                       if (isValid.getAsBoolean()) runWheel();
+                       else stopWheel();
                        coro.yield();
                    }
                })

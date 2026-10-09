@@ -17,18 +17,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import first.robot.util.NTable;
-import first.robot.util.SysIdRoutine;
-import frc.robot.PartialRobot;
-import frc.robot.commands.LaunchCalculator;
-import frc.robot.commands.LaunchCalculator.LaunchGoal;
-import frc.robot.constants.FieldConstants;
-import frc.robot.constants.robot.CompbotConstants;
-import frc.robot.constants.robot.CompbotTunerConstants;
-import frc.robot.constants.robot.RobotConstants;
-import frc.robot.util.TunableProfiledPIDController;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
+
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.command3.Trigger;
@@ -50,6 +39,21 @@ import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 import org.wpilib.units.measure.Voltage;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+
+import first.robot.util.NTable;
+import first.robot.util.SysIdRoutine;
+
+import frc.robot.PartialRobot;
+import frc.robot.commands.LaunchCalculator;
+import frc.robot.commands.LaunchCalculator.LaunchGoal;
+import frc.robot.constants.FieldConstants;
+import frc.robot.constants.robot.CompbotConstants;
+import frc.robot.constants.robot.CompbotTunerConstants;
+import frc.robot.constants.robot.RobotConstants;
+import frc.robot.util.TunableProfiledPIDController;
+
 public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private final TalonFX kraken = new TalonFX(Constants.TURRET_MOTOR_ID);
     private final DigitalInput hallLimit = new DigitalInput(Constants.TURRET_LIMIT_PIN);
@@ -59,8 +63,10 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     private final ProfiledPIDController pid = new ProfiledPIDController(
         TurretConstants.KP, TurretConstants.KI, TurretConstants.KD,
-        new TrapezoidProfile.Constraints(TurretConstants.MAX_VEL.in(RotationsPerSecond),
-                                         TurretConstants.MAX_ACC.in(RotationsPerSecondPerSecond)));
+        new TrapezoidProfile.Constraints(
+            TurretConstants.MAX_VEL.in(RotationsPerSecond), TurretConstants.MAX_ACC.in(RotationsPerSecondPerSecond)
+        )
+    );
     private final SimpleMotorFeedforward ff =
         new SimpleMotorFeedforward(TurretConstants.KS, TurretConstants.KV, TurretConstants.KA);
 
@@ -70,8 +76,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     private Supplier<Boolean> turretEnabled;
 
-    public TurretMechanism(Supplier<Pose2d> robotPoseSupplier, RobotConstants driveConstants,
-                           Supplier<Boolean> turretEnabled) {
+    public TurretMechanism(
+        Supplier<Pose2d> robotPoseSupplier, RobotConstants driveConstants, Supplier<Boolean> turretEnabled
+    ) {
         super();
         this.driveConstants = driveConstants;
         kraken.getConfigurator().apply(new TalonFXConfiguration());
@@ -120,8 +127,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     public void logTo(TelemetryTable table) {
         table.log("turret/posRots", getAngle().in(Rotations));
         table.log("turret/velRPS", kraken.getVelocity().getValue().in(RotationsPerSecond));
-        table.log("turret/setpointPosRots",
-                  turretRelToRobotRel(Rotations.of(pid.getSetpoint().position)).in(Rotations));
+        table.log(
+            "turret/setpointPosRots", turretRelToRobotRel(Rotations.of(pid.getSetpoint().position)).in(Rotations)
+        );
         table.log("turret/setpointVelRPS", pid.getSetpoint().velocity);
         table.log("turret/volts", kraken.getMotorVoltage().getValueAsDouble());
         table.log("turret/posErrorRots", pid.getPositionError());
@@ -130,8 +138,10 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         table.log("turret/atForwardSoftwareLimit", isAtForwardLim.getAsBoolean());
         table.log("turret/atReverseSoftwareLimit", isAtReverseLim.getAsBoolean());
         table.log("turret/isAtGoalPos", isAtGoalPos());
-        table.log("turret/distance to hub", FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)
-                                                .getDistance(this.getMechanismPose().getTranslation()));
+        table.log(
+            "turret/distance to hub", FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)
+                                          .getDistance(this.getMechanismPose().getTranslation())
+        );
         table.log("turret/canTurnTo", canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
         Telemetry.field.getObject("turret_pose").setPose(getMechanismPose());
         table.log("turret/statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
@@ -163,19 +173,22 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         return getAngleTurretRel().lte(TurretConstants.REVERSE_LIMIT_TUR_REL.plus(TurretConstants.SOFT_PADDING));
     };
 
-    private SysIdRoutine routine =
-        new SysIdRoutine(new SysIdRoutine.Config(Volts.of(0.15).per(Second), Volts.of(1), null, null,
-                                                 v
-                                                 -> kraken.setVoltage(v.in(Volts)),
-                                                 log
-                                                 -> {
-                                                     log.motor("turret_motor")
-                                                         .voltage(kraken.getMotorVoltage().getValue())
-                                                         .angularVelocity(kraken.getVelocity().getValue())
-                                                         .angularPosition(getAngleTurretRel());
-                                                 },
-                                                 "turret"),
-                         this);
+    private SysIdRoutine routine = new SysIdRoutine(
+        new SysIdRoutine.Config(
+            Volts.of(0.15).per(Second), Volts.of(1), null, null,
+            v
+            -> kraken.setVoltage(v.in(Volts)),
+            log
+            -> {
+                log.motor("turret_motor")
+                    .voltage(kraken.getMotorVoltage().getValue())
+                    .angularVelocity(kraken.getVelocity().getValue())
+                    .angularPosition(getAngleTurretRel());
+            },
+            "turret"
+        ),
+        this
+    );
 
     /**
      * SysId command for this subsystem
@@ -196,8 +209,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                    routine.quasistaticRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
 
                    System.out.println("done with turret sysid");
-               })
-            .named("turret sysid");
+               }
+        ).named("turret sysid");
     }
 
     /**
@@ -215,8 +228,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         return startRun(
                    ()
                        -> {
-                       pid.reset(new State(getAngleTurretRel().in(Rotations),
-                                           kraken.getVelocity().getValue().in(RotationsPerSecond)));
+                       pid.reset(new State(
+                           getAngleTurretRel().in(Rotations), kraken.getVelocity().getValue().in(RotationsPerSecond)
+                       ));
                        pid.setGoal(goalSupplier.get());
                        prevVel = kraken.getVelocity().getValue().in(RotationsPerSecond);
                    },
@@ -235,8 +249,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        double voltsToSet = (!isAtGoalPos()) ? pidOut + ffOut : 0;
                        kraken.setVoltage(voltsToSet);
                        prevVel = newVel;
-                   })
-            .finallyDo(() -> kraken.setVoltage(0));
+                   }
+        ).finallyDo(() -> kraken.setVoltage(0));
     }
 
     /**
@@ -252,8 +266,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         return startRun(
                    ()
                        -> {
-                       pid.reset(new State(getAngleTurretRel().in(Rotations),
-                                           kraken.getVelocity().getValue().in(RotationsPerSecond)));
+                       pid.reset(new State(
+                           getAngleTurretRel().in(Rotations), kraken.getVelocity().getValue().in(RotationsPerSecond)
+                       ));
                        pid.setGoal(new State(formatInputPosRobotRel(goal).in(Rotations), 0));
                        prevVel = kraken.getVelocity().getValue().in(RotationsPerSecond);
                    },
@@ -274,7 +289,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        kraken.setVoltage(voltsToSet);
                        prevVel = newVel;
                        _T.toc();
-                   })
+                   }
+        )
             .finallyDo(() -> kraken.setVoltage(0))
             .withName("hold robot relative");
     }
@@ -304,12 +320,14 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
      * @return {@link Command} that repeatedly applies the output of the
      *         {@link ProfiledPIDController} to the motor.
      */
-    public Command trackRobotRelWithVelocity(Supplier<Angle> angleSupplier,
-                                             Supplier<AngularVelocity> velocitySupplier) {
+    public Command
+    trackRobotRelWithVelocity(Supplier<Angle> angleSupplier, Supplier<AngularVelocity> velocitySupplier) {
         return trackStateTurretRel(
             ()
                 -> formatInputStateRobotRel(
-                    new State(angleSupplier.get().in(Rotations), velocitySupplier.get().in(RotationsPerSecond))));
+                    new State(angleSupplier.get().in(Rotations), velocitySupplier.get().in(RotationsPerSecond))
+                )
+        );
     }
 
     /**
@@ -396,25 +414,31 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
      */
     public Pose2d getMechanismPose() {
         Pose2d robotPoseInField = robotPoseSupplier.get();
-        return new Pose2d(driveConstants.getRobotToTurretCenter()
-                              .rotateBy(robotPoseInField.getRotation())
-                              .plus(robotPoseInField.getTranslation()),
-                          getRotation().plus(robotPoseInField.getRotation()));
+        return new Pose2d(
+            driveConstants.getRobotToTurretCenter()
+                .rotateBy(robotPoseInField.getRotation())
+                .plus(robotPoseInField.getTranslation()),
+            getRotation().plus(robotPoseInField.getRotation())
+        );
     }
 
     public boolean isAtGoalPos() {
-        return MathUtil.isNear(pid.getController().getGoal().position, getAngleTurretRel().in(Rotations),
-                               TOLERANCE.in(Rotations));
+        return MathUtil.isNear(
+            pid.getController().getGoal().position, getAngleTurretRel().in(Rotations), TOLERANCE.in(Rotations)
+        );
     }
 
     public boolean isDynamicAimed() {
-        return MathUtil.isNear(pid.getController().getGoal().position, getAngleTurretRel().in(Rotations),
-                               DYNAMIC_TOLERANCE.in(Rotations));
+        return MathUtil.isNear(
+            pid.getController().getGoal().position, getAngleTurretRel().in(Rotations), DYNAMIC_TOLERANCE.in(Rotations)
+        );
     }
 
     public boolean isDynamicAimedAt(Angle robotRelTarget) {
-        return MathUtil.isNear(robotRelToTurretRel(robotRelTarget).in(Rotations), getAngleTurretRel().in(Rotations),
-                               DYNAMIC_TOLERANCE.in(Rotations));
+        return MathUtil.isNear(
+            robotRelToTurretRel(robotRelTarget).in(Rotations), getAngleTurretRel().in(Rotations),
+            DYNAMIC_TOLERANCE.in(Rotations)
+        );
     }
 
     /**
@@ -438,14 +462,16 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                                                           .withForwardSoftLimitEnable(false)
                                                           .withForwardSoftLimitThreshold(FORWARD_LIMIT_TUR_REL)
                                                           .withReverseSoftLimitEnable(true)
-                                                          .withReverseSoftLimitThreshold(REVERSE_LIMIT_TUR_REL)))
+                                                          .withReverseSoftLimitThreshold(REVERSE_LIMIT_TUR_REL))
+            )
             .finallyDo(
                 ()
                     -> kraken.getConfigurator().apply(new SoftwareLimitSwitchConfigs()
                                                           .withForwardSoftLimitEnable(true)
                                                           .withForwardSoftLimitThreshold(FORWARD_LIMIT_TUR_REL)
                                                           .withReverseSoftLimitEnable(true)
-                                                          .withReverseSoftLimitThreshold(REVERSE_LIMIT_TUR_REL)));
+                                                          .withReverseSoftLimitThreshold(REVERSE_LIMIT_TUR_REL))
+            );
     }
 
     /**
@@ -483,9 +509,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         public Tester() {
             super();
             // turret.setDefaultCommand(turret.holdRobotRel(Rotations.of(0)));
-            turret.zeroTrigger.onTrue(turret.zeroCommand()); // resets the turrets position when it engages the
-                                                             // Hall-Effect
-                                                             // sensor and the robot is Disabled
+            turret.zeroTrigger.onTrue(turret.zeroCommand());  // resets the turrets position when it engages the
+                                                              // Hall-Effect
+                                                              // sensor and the robot is Disabled
 
             controller.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
             controller.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));

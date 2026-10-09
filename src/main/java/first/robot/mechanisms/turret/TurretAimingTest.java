@@ -1,11 +1,12 @@
 package first.robot.mechanisms.turret;
 
-import first.robot.Robot;
-import first.robot.mechanisms.limelight.LimelightMechanism;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.Telemetry;
+
+import first.robot.Robot;
+import first.robot.mechanisms.limelight.LimelightMechanism;
 
 @Utility(name = "Turret aiming test", group = "Testers")
 public class TurretAimingTest implements OpMode {
@@ -14,8 +15,9 @@ public class TurretAimingTest implements OpMode {
 
     public final Telemetry logger = new Telemetry(drivetrain, turret);
 
-    private final LimelightMechanism[] limelights = {new LimelightMechanism(drivetrain, "limelight-fone"),
-                                                     new LimelightMechanism(drivetrain, "limelight-ftwo")};
+    private final LimelightMechanism[] limelights = {
+        new LimelightMechanism(drivetrain, "limelight-fone"), new LimelightMechanism(drivetrain, "limelight-ftwo")
+    };
     private Robot robot;
 
     public TurretAimingTest(Robot robot) {
@@ -34,7 +36,8 @@ public class TurretAimingTest implements OpMode {
                 -> controller.getLeftTriggerAxis(),
             ()
                 -> controller.getRightTriggerAxis(),
-            () -> controller.getHID().getYButton(), () -> controller.getHID().getStartButton()));
+            () -> controller.getHID().getYButton(), () -> controller.getHID().getStartButton()
+        ));
 
         controller.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
         controller.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));

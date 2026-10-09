@@ -18,11 +18,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import frc.robot.PartialRobot;
-import frc.robot.constants.Constants;
-import frc.robot.constants.LauncherConstants;
-import frc.robot.util.NTable;
-import java.util.function.Supplier;
+
 import org.wpilib.math.controller.BangBangController;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
 import org.wpilib.units.measure.AngularVelocity;
@@ -33,6 +29,13 @@ import org.wpilib.wpilibj2.command.sysid.SysIdRoutine;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Config;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
+
+import java.util.function.Supplier;
+
+import frc.robot.PartialRobot;
+import frc.robot.constants.Constants;
+import frc.robot.constants.LauncherConstants;
+import frc.robot.util.NTable;
 
 public class LauncherSubsystem extends SubsystemBase {
     private final TalonFX krakenLeft = new TalonFX(Constants.LAUNCHER_LEFT_KRAKEN_ID);

@@ -1,13 +1,5 @@
 package first.robot.util;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTable;
 import org.wpilib.networktables.NetworkTableEntry;
@@ -27,6 +19,15 @@ import org.wpilib.tunable.TunableOption;
 import org.wpilib.tunable.TunableRegistry;
 import org.wpilib.util.struct.Struct;
 import org.wpilib.util.struct.StructBuffer;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * A {@link NetworkTable}.
@@ -68,9 +69,9 @@ public class NTable {
         this.parent = parent;
         long depth = this.table.getPath().chars().filter(c -> c == '/').count();
         if (depth > 50) {
-            DriverStationErrors.reportWarning("very long NTable of depth " + depth +
-                                                  " created! be careful. its path is " + this.table.getPath(),
-                                              true);
+            DriverStationErrors.reportWarning(
+                "very long NTable of depth " + depth + " created! be careful. its path is " + this.table.getPath(), true
+            );
         }
 
         for (String entry : this.table.getKeys()) {
@@ -116,7 +117,9 @@ public class NTable {
             name,
             n
             -> new NetworkTableEntry(
-                instance, NetworkTablesJNI.getEntry(instance.getHandle(), this.table.getPath() + "/" + name)));
+                instance, NetworkTablesJNI.getEntry(instance.getHandle(), this.table.getPath() + "/" + name)
+            )
+        );
     }
 
     public NetworkTableEntry getEntry(String name, NetworkTableType type, String typeName) {
@@ -126,7 +129,10 @@ public class NTable {
             -> new NetworkTableEntry(
                 instance, NetworkTablesJNI.getEntry(
                               NetworkTablesJNI.getTopic(instance.getHandle(), this.table.getPath() + "/" + name),
-                              type.getValue(), typeName)));
+                              type.getValue(), typeName
+                          )
+            )
+        );
     }
 
     /**
@@ -211,7 +217,7 @@ public class NTable {
         // type.
         Struct<?> possibleStruct = getStructForType(value.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)possibleStruct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) possibleStruct;
             setStruct(name, value, casted);
             return;
         }
@@ -225,16 +231,18 @@ public class NTable {
                 // component type of value. Due to Java generics being a pile of type-erasing
                 // bullshit, we can cast everything to be in terms of Object and it should just
                 // work.
-                @SuppressWarnings("unchecked") Struct<Object> castedStruct = (Struct<Object>)possibleStruct;
+                @SuppressWarnings("unchecked") Struct<Object> castedStruct = (Struct<Object>) possibleStruct;
                 setStructArray(name, casted, castedStruct);
                 return;
             }
         }
 
         // If none of the above cases apply, print a warning.
-        DriverStationErrors.reportError("NTable: Could not publish value of type " + value.getClass().getName() +
-                                            " to entry " + name + ": it is not supported.",
-                                        false);
+        DriverStationErrors.reportError(
+            "NTable: Could not publish value of type " + value.getClass().getName() + " to entry " + name +
+                ": it is not supported.",
+            false
+        );
     }
 
     /**
@@ -262,10 +270,11 @@ public class NTable {
      */
     public void setSimple(String name, Object value) {
         if (!NetworkTableEntry.isValidDataType(value)) {
-            DriverStationErrors.reportWarning("NTable entry " + table.getPath() + "/" + name +
-                                                  " has invalid type; the passed object is of type " +
-                                                  value.getClass().getName(),
-                                              true);
+            DriverStationErrors.reportWarning(
+                "NTable entry " + table.getPath() + "/" + name + " has invalid type; the passed object is of type " +
+                    value.getClass().getName(),
+                true
+            );
             return;
         }
         getEntry(name).setValue(value);
@@ -273,8 +282,10 @@ public class NTable {
 
     /** Publishes a ByteBuffer to the NetworkTable. */
     private void publishRawBuffer(String name, ByteBuffer buffer, String typeString) {
-        NetworkTablesJNI.setRaw(getEntry(name, NetworkTableType.RAW, typeString).getHandle(), NetworkTablesJNI.now(),
-                                buffer, 0, buffer.position());
+        NetworkTablesJNI.setRaw(
+            getEntry(name, NetworkTableType.RAW, typeString).getHandle(), NetworkTablesJNI.now(), buffer, 0,
+            buffer.position()
+        );
     }
 
     /**
@@ -307,14 +318,15 @@ public class NTable {
             // function, use it
             Struct<?> struct = cachedStructs.get(classType);
             if (!struct.getTypeClass().isAssignableFrom(classType)) {
-                DriverStationErrors.reportError("tried to publish a " + classType.getName() +
-                                                    ", but a struct of type " + struct.getTypeClass().getName() +
-                                                    " had already been registered for this entry in " +
-                                                    table.getPath(),
-                                                true);
+                DriverStationErrors.reportError(
+                    "tried to publish a " + classType.getName() + ", but a struct of type " +
+                        struct.getTypeClass().getName() + " had already been registered for this entry in " +
+                        table.getPath(),
+                    true
+                );
                 return null;
             }
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)struct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) struct;
             return casted;
         }
 
@@ -329,7 +341,7 @@ public class NTable {
             if (!(possibleStruct instanceof Struct<?> struct) || !struct.getTypeClass().isAssignableFrom(classType)) {
                 return null;
             }
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)struct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) struct;
             cachedStructs.put(classType, struct);
             return casted;
 
@@ -487,7 +499,7 @@ public class NTable {
             if (!classType.isInstance(retrieved.getValue())) {
                 return defaultValue;
             }
-            @SuppressWarnings("unchecked") T value = (T)defaultValue.getClass().cast(retrieved.getValue());
+            @SuppressWarnings("unchecked") T value = (T) defaultValue.getClass().cast(retrieved.getValue());
             return value;
         }
 
@@ -496,7 +508,7 @@ public class NTable {
         // type.
         Struct<?> possibleStruct = getStructForType(defaultValue.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>)possibleStruct;
+            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) possibleStruct;
             T result = getStruct(name, casted);
             if (result == null) {
                 return defaultValue;
@@ -514,7 +526,7 @@ public class NTable {
                 // here,
                 // and is in fact the value-type of the T here (meaning the T of #get is of type
                 // E[] where E is referred to as T within getStructArray).
-                @SuppressWarnings("unchecked") T result = (T)getStructArray(name, possibleStruct2);
+                @SuppressWarnings("unchecked") T result = (T) getStructArray(name, possibleStruct2);
                 if (result == null) {
                     return defaultValue;
                 }
@@ -523,10 +535,11 @@ public class NTable {
         }
 
         // If none of the above cases apply, print a warning.
-        DriverStationErrors.reportError("NTable: Could not retrieve value of type " +
-                                            defaultValue.getClass().getName() + " to entry " + name +
-                                            ": it is not supported.",
-                                        true);
+        DriverStationErrors.reportError(
+            "NTable: Could not retrieve value of type " + defaultValue.getClass().getName() + " to entry " + name +
+                ": it is not supported.",
+            true
+        );
         return defaultValue;
     }
 
@@ -612,7 +625,8 @@ public class NTable {
             return buffer.read(raw);
         } catch (RuntimeException e) {
             DriverStationErrors.reportWarning(
-                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true);
+                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true
+            );
             return null;
         }
     }
@@ -644,13 +658,14 @@ public class NTable {
             return buffer.readArray(raw);
         } catch (RuntimeException e) {
             DriverStationErrors.reportWarning(
-                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true);
+                "NTable entry " + table.getPath() + "/" + name + " could not be unpacked: " + e.getMessage(), true
+            );
             return null;
         }
     }
 
-    public <T> Tunable<T> tunable(String name, Supplier<T> getter, Consumer<T> setCallback, Class<T> classType,
-                                  TunableConfig config) {
+    public <T> Tunable<T>
+    tunable(String name, Supplier<T> getter, Consumer<T> setCallback, Class<T> classType, TunableConfig config) {
         Tunable<T> res = Tunable.createConfig(null, null, classType, config);
         TunableRegistry.publish(getPath() + name, res);
         return res;
@@ -676,8 +691,8 @@ public class NTable {
 
     public <T> Tunable<T> tunable(String name, Class<T> classType) { return tunable(name, classType, null); }
 
-    private <T extends TunableBase, U> T tunableOf(String name, Class<T> classType, U initialValue,
-                                                   Class<U> valueType) {
+    private <T extends TunableBase, U>
+        T tunableOf(String name, Class<T> classType, U initialValue, Class<U> valueType) {
         try {
             Constructor<T> ctor = classType.getConstructor(valueType, TunableConfig.class);
             T res = ctor.newInstance(initialValue, TunableConfig.of(TunableOption.ALWAYS_GET));
@@ -685,7 +700,8 @@ public class NTable {
             return res;
         } catch (ReflectiveOperationException e) {
             DriverStationErrors.reportWarning(
-                "some error occurred while making a tunable of type " + classType.getCanonicalName(), true);
+                "some error occurred while making a tunable of type " + classType.getCanonicalName(), true
+            );
             DriverStationErrors.reportWarning("error: " + e.getMessage(), e.getStackTrace());
             return null;
         }

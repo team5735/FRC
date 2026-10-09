@@ -17,9 +17,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import frc.robot.PartialRobot;
-import frc.robot.constants.Constants;
-import frc.robot.constants.IntakeConstants;
+
 import org.wpilib.math.controller.ArmFeedforward;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
@@ -33,6 +31,10 @@ import org.wpilib.wpilibj2.command.sysid.SysIdRoutine;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Config;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
+
+import frc.robot.PartialRobot;
+import frc.robot.constants.Constants;
+import frc.robot.constants.IntakeConstants;
 
 public class IntakeMechanism extends SubsystemBase {
     private final TalonFX intakeSlapdown = new TalonFX(Constants.INTAKE_SLAPDOWN_TALONFX_ID);

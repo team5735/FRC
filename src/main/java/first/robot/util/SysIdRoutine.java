@@ -4,8 +4,6 @@ import static org.wpilib.sysid.SysIdRoutineLog.State;
 import static org.wpilib.units.Units.Seconds;
 import static org.wpilib.units.Units.Volts;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Coroutine;
 import org.wpilib.command3.Mechanism;
@@ -16,7 +14,12 @@ import org.wpilib.units.measure.Time;
 import org.wpilib.units.measure.Velocity;
 import org.wpilib.units.measure.Voltage;
 
-/** CommandsV3 version of SysIdRoutine */
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+
+/**
+ * CommandsV3 version of SysIdRoutine
+ */
 public class SysIdRoutine {
     private Config config;
     private Mechanism mechanism;
@@ -41,9 +44,10 @@ public class SysIdRoutine {
         Direction(int sign) { this.sign = sign; }
     }
 
-    public static record Config(Velocity<VoltageUnit> rampRate, Voltage stepVoltage, Time timeout,
-                                Consumer<State> recordState, Consumer<? super Voltage> setOutput,
-                                Consumer<SysIdRoutineLog> logger, String name) {}
+    public static record Config(
+        Velocity<VoltageUnit> rampRate, Voltage stepVoltage, Time timeout, Consumer<State> recordState,
+        Consumer<? super Voltage> setOutput, Consumer<SysIdRoutineLog> logger, String name
+    ) {}
 
     public void quasistaticRun(Direction direction, Coroutine coro, BooleanSupplier until) {
         double outputSign = direction == Direction.FORWARD ? 1.0 : -1.0;
@@ -53,7 +57,7 @@ public class SysIdRoutine {
         timer.start();
 
         while (!until.getAsBoolean()) {
-            Voltage voltage = (Voltage)(this.config.rampRate.times(Seconds.of(timer.get())).times(outputSign));
+            Voltage voltage = (Voltage) (this.config.rampRate.times(Seconds.of(timer.get())).times(outputSign));
             this.config.setOutput.accept(voltage);
             this.config.logger.accept(this.logger);
             this.config.recordState.accept(state);

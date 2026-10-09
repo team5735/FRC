@@ -31,7 +31,7 @@ public class ExampleMechanism implements Mechanism {
                        System.out.println("Example command run #" + runCount);
                        coroutine.yield();
                    }
-               })
-            .named("Example Command");
+               }
+        ).named("Example Command");
     }
 }

@@ -5,13 +5,16 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import first.robot.constants.CANIds;
-import frc.robot.PartialRobot;
-import frc.robot.constants.ClimberConstants;
+
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.wpilibj.smartdashboard.SmartDashboard;
+
+import first.robot.constants.CANIds;
+
+import frc.robot.PartialRobot;
+import frc.robot.constants.ClimberConstants;
 
 public class ClimberMechanism implements Mechanism {
     public final TalonFX talon = new TalonFX(CANIds.CLIMB_TALON_ID);

@@ -5,8 +5,10 @@ PS4=$'F \t$EPOCHREALTIME\t '
 
 cd $(git rev-parse --show-toplevel)
 
-response="$(git stash push)"
-[[ "$response" = "No local changes to save" ]] || trap "git stash pop --quiet" exit
+if [[ "$1" = "--no-ask" ]]; then
+    response="$(git stash push)"
+    [[ "$response" = "No local changes to save" ]] || trap "git stash pop --quiet" exit
+fi
 
 files=$(find . -name '*.java' -type f)
 [[ -z "$files" ]] && exit 0
@@ -28,7 +30,7 @@ fi
 
 case "$should_commit" in
     y|Y|$'\n')
-        <<<"$modified" xargs --delim=\\n git add
+        <<<"$modified" xargs git add
         git commit --message="(format.java.sh) clang-format $count file(s)"
         ;;
     c|C)
