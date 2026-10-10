@@ -1,6 +1,4 @@
-// Currently, there is no 2027 library for CTRE devices.
-/*
-package frc.robot.subsystems;
+package first.robot.mechanisms.climber;
 
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -9,127 +7,87 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.DigitalInput;
-import org.wpilib.wpilibj.smartdashboard.SmartDashboard;
+import org.wpilib.opmode.OpMode;
+import org.wpilib.opmode.Utility;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
 
-import first.robot.constants.CANIds;
+import first.robot.IDs;
+import first.robot.Robot;
 
-import frc.robot.PartialRobot;
-import frc.robot.constants.ClimberConstants;
+public class ClimberMechanism implements Mechanism, TelemetryLoggable {
+    public final TalonFX talon = new TalonFX(IDs.CLIMB_TALON_ID);
 
-public class ClimberMechanism implements Mechanism {
-    public final TalonFX talon = new TalonFX(CANIds.CLIMB_TALON_ID);
+    private final DigitalInput limitDown = new DigitalInput(IDs.CLIMB_UPPER_LIMIT_PIN);
+    private final DigitalInput limitUp = new DigitalInput(IDs.CLIMB_LOWER_LIMIT_PIN);
 
-    private final DigitalInput limitDown = new DigitalInput(Constants.CLIMB_UPPER_LIMIT_PIN);
-    private final DigitalInput limitUp = new DigitalInput(Constants.CLIMB_LOWER_LIMIT_PIN);
     private boolean canMoveUp;
     private boolean canMoveDown;
-    private boolean overriden;
+    private boolean overridden;
 
     public ClimberMechanism() {
-        super();
         talon.getConfigurator().apply(new MotorOutputConfigs().withNeutralMode(NeutralModeValue.Brake));
     }
 
-    public Command getExtendCommand() {
-        return run(() -> extend()).finallyDo(a -> stop());
-    }
-
-    public Command getRetractCommand() {
-        return run(() -> retract()).finallyDo(a -> stop());
-    }
-
-    public Command getExtendOverrideCommand() {
-        return run(() -> extendOverride()).finallyDo(a -> stop());
-    }
-
-    public Command getRetractOverrideCommand() {
-        return run(() -> retractOverride()).finallyDo(a -> stop());
-    }
-
     public void retract() {
-        if (canMoveUp) {
-            talon.setVoltage(ClimberConstants.RETRACT_VOLTS);
-        } else {
-            talon.setVoltage(0);
-        }
+        if (canMoveUp) talon.setVoltage(ClimberConstants.RETRACT_VOLTS);
+        else talon.setVoltage(0);
     }
 
     public void extend() {
-        if (canMoveDown) {
-            talon.setVoltage(ClimberConstants.EXTEND_VOLTS);
-        } else {
-            talon.setVoltage(0);
-        }
+        if (canMoveDown) talon.setVoltage(ClimberConstants.EXTEND_VOLTS);
+        else talon.setVoltage(0);
     }
 
-    public Command getFullyExtendCommand() {
-        return run(() -> extend()).until(this::isAtUpLimit).finallyDo(() -> stop());
-    }
-
-    public Command getFullyDetractCommand() {
-        return run(() -> retract()).until(this::isAtDownLimit).finallyDo(() -> stop());
-    }
-
-    public void retractOverride() {
-        overriden = true;
-        talon.setVoltage(ClimberConstants.RETRACT_VOLTS);
-    }
-
-    public void extendOverride() {
-        overriden = true;
-        talon.setVoltage(ClimberConstants.EXTEND_VOLTS);
-    }
+    public void setOverride(boolean newVal) { overridden = newVal; }
 
     public void stop() {
         talon.setVoltage(0);
-        overriden = false;
+        overridden = false;
     }
 
-    public boolean isAtDownLimit() {
-        return !limitDown.get();
-    }
+    public boolean isAtDownLimit() { return !limitDown.get(); }
 
-    public boolean isAtUpLimit() {
-        return !limitUp.get();
-    }
+    public boolean isAtUpLimit() { return !limitUp.get(); }
 
-    @Override
-    public void periodic() {
+    public void checkLimitSwitches() {
         // DIO
         canMoveUp = limitDown.get();
         canMoveDown = limitUp.get();
 
-        if (!canMoveDown && talon.getMotorVoltage().getValueAsDouble() < 0 && !overriden) {
+        if (!canMoveDown && talon.getMotorVoltage().getValueAsDouble() < 0 && !overridden) {
             talon.setVoltage(0);
-        } else if (!canMoveUp && talon.getMotorVoltage().getValueAsDouble() > 0 && !overriden) {
+        } else if (!canMoveUp && talon.getMotorVoltage().getValueAsDouble() > 0 && !overridden) {
             talon.setVoltage(0);
         }
-
-        SmartDashboard.putBoolean("limitUp", limitUp.get());
-        SmartDashboard.putBoolean("limitDown", limitDown.get());
-
-        double current = talon.getSupplyCurrent().getValueAsDouble();
-        SmartDashboard.putNumber("Climber/Current", current);
-
-        double velocity = talon.getVelocity().getValueAsDouble();
-        SmartDashboard.putNumber("Climber/Velocity", velocity);
-
-        double forwardLimit = talon.getForwardLimit().getValueAsDouble();
-        SmartDashboard.putNumber("Climber/ForwardLimit", forwardLimit);
-
-        double reverseLimit = talon.getReverseLimit().getValueAsDouble();
-        SmartDashboard.putNumber("Climber/ReverseLimit", reverseLimit);
     }
 
-    public static class Tester extends PartialRobot {
+    @Override
+    public void logTo(TelemetryTable table) {
+        table.log("limit_up", limitUp.get());
+        table.log("limit_down", limitDown.get());
+        table.log("current", talon.getSupplyCurrent().getValueAsDouble());
+        table.log("velocity", talon.getVelocity().getValueAsDouble());
+        table.log("forward_limit", talon.getForwardLimit().getValueAsDouble());
+        table.log("reverse_limit", talon.getReverseLimit().getValueAsDouble());
+    }
 
+    @Utility
+    public static class Tester implements OpMode {
         ClimberMechanism climber = new ClimberMechanism();
 
-        public Tester() {
-            super();
-            controller.rightTrigger().whileTrue(climber.getExtendCommand());
-            controller.leftTrigger().whileTrue(climber.getRetractCommand());
+        public Tester(Robot robot) {
+            robot.port0.rightTrigger()
+                .whileTrue(climber.run(_ -> climber.extend()).named("extend"))
+                .onFalse(climber.run(_ -> climber.stop()).named("stop"));
+            robot.port0.leftTrigger()
+                .whileTrue(climber.run(_ -> climber.retract()).named("retract"))
+                .onFalse(climber.run(_ -> climber.stop()).named("stop"));
+        }
+
+        @Override
+        public void periodic() {
+            climber.checkLimitSwitches();
         }
     };
 }
-*/
