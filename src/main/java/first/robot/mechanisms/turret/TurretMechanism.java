@@ -576,22 +576,19 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     @Utility
     public static class Tester implements OpMode {
         private final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true, _ -> {});
-        private Robot robot;
 
         public Tester(Robot robot) {
-            this.robot = robot;
-
-            this.robot.port0.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
-            this.robot.port0.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
-            this.robot.port0.rightBumper().whileTrue(turret.trackRobotRel(() -> {
-                double x = this.robot.port0.getRightX();
-                double y = this.robot.port0.getRightY();
+            robot.port0.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
+            robot.port0.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
+            robot.port0.rightBumper().whileTrue(turret.trackRobotRel(() -> {
+                double x = robot.port0.getRightX();
+                double y = robot.port0.getRightY();
                 return new Rotation2d(-y, -x).getMeasure();
             }));
-            this.robot.port0.x().whileTrue(turret.zeroSequence());
+            robot.port0.x().whileTrue(turret.zeroSequence());
 
-            this.robot.port0.dpadUp().whileTrue(turret.sysId());
-            this.robot.port0.dpadDown().onTrue(turret.run(_ -> turret.remakePID()).named("remake pid"));
+            robot.port0.dpadUp().whileTrue(turret.sysId());
+            robot.port0.dpadDown().onTrue(turret.run(_ -> turret.remakePID()).named("remake pid"));
         }
 
         @Override

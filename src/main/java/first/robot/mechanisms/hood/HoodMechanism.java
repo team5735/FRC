@@ -1,21 +1,20 @@
 package first.robot.mechanisms.hood;
 
+import java.util.function.Supplier;
+
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;
 import org.wpilib.hardware.discrete.PWM;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.shape.Rectangle2d;
-import org.wpilib.math.util.MathUtil;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
 
-import java.util.function.Supplier;
-
+import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
-import first.robot.mechanisms.hood.HoodConstants;
 
 public class HoodMechanism implements Mechanism, TelemetryLoggable {
     private final PWM servo = new PWM(IDs.HOOD_SERVO_PIN);
@@ -134,12 +133,7 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
 
         private double lastPos = 0.6;
 
-        private Robot robot;
-
         public Tester(Robot robot) {
-            super();
-            this.robot = robot;
-
             robot.port0.y().onTrue(hood.run(_ -> hood.setHoodPosition(1.0)).named("set hood position to 1.0"));
             robot.port0.b().onTrue(hood.run(_ -> hood.setHoodPosition(0.0)).named("set hood position to 0.0"));
 
@@ -150,6 +144,7 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
                                                hood.setServoPosition(lastPos);
                                            }
             ).named("nudge up"));
+
             robot.port0.a().onTrue(hood.run(
                                            _ -> {
                                                lastPos -= 0.025;
