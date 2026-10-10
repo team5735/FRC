@@ -1,7 +1,5 @@
 package first.robot.mechanisms.hood;
 
-import java.util.function.Supplier;
-
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;
 import org.wpilib.hardware.discrete.PWM;
@@ -11,6 +9,8 @@ import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
+
+import java.util.function.Supplier;
 
 import first.robot.FieldConstants;
 import first.robot.IDs;
