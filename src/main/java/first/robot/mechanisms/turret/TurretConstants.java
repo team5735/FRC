@@ -6,6 +6,7 @@ import static org.wpilib.units.Units.RotationsPerSecond;
 import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
 
 import org.wpilib.math.trajectory.TrapezoidProfile;
+import org.wpilib.math.trajectory.TrapezoidProfile.State;
 import org.wpilib.math.util.MathUtil;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularAcceleration;
@@ -56,106 +57,4 @@ public class TurretConstants {
     public static final Angle START_POS_BOT_REL = Rotations.of(0.25);
 
     public static final Angle CLIMB_POS_BOT_REL = Rotations.of(0.92);
-
-    /**
-     * Clamps a goal angle and to the functional range of this subsystem, converting
-     * it to the turret-relative space
-     *
-     * @param input the robot-relative goal position to be clamped.
-     *
-     * @return turret-relative {@link Angle} inclusively between the upper and lower
-     *         bounds of this
-     *         subsystem; either the rotational equivalent of the input, or one of
-     *         the bounds.
-     */
-    public static Angle formatInputPosRobotRel(Angle input) {
-        return formatInputPosTurretRel(robotRelToTurretRel(input));
-    }
-
-    public static State formatInputStateRobotRel(State input) {
-        return formatInputStateTurretRel(new State(input.position - ZERO_OFFSET.in(Rotations), input.velocity));
-    }
-
-    /**
-     * Clamps a goal angle and to the functional range of this subsystem
-     *
-     * @param input the turret-relative goal position to be clamped.
-     *
-     * @return turret-relative {@link Angle} inclusively between the upper and lower
-     *         bounds of this
-     *         subsystem; either the rotational equivalent of the input, or one of
-     *         the bounds.
-     */
-    public static Angle formatInputPosTurretRel(Angle input) {
-        double softReverseLimit = REVERSE_LIMIT_TUR_REL.plus(SOFT_PADDING).in(Rotations);
-        double softForwardLimit = FORWARD_LIMIT_TUR_REL.minus(SOFT_PADDING).in(Rotations);
-        double moddedInput = MathUtil.inputModulus(input.in(Rotations), 0, 1);
-        return Rotations.of(MathUtil.clamp(moddedInput, softReverseLimit, softForwardLimit));
-    }
-
-    public static State formatInputStateTurretRel(State input) {
-        double softReverseLimit = REVERSE_LIMIT_TUR_REL.plus(SOFT_PADDING).in(Rotations);
-        double softForwardLimit = FORWARD_LIMIT_TUR_REL.minus(SOFT_PADDING).in(Rotations);
-        double moddedInput = MathUtil.inputModulus(input.position, 0, 1);
-        double newPos = MathUtil.clamp(moddedInput, softReverseLimit, softForwardLimit);
-
-        double newVel = input.velocity;
-        double maxVelRPS = MAX_VEL.in(RotationsPerSecond);
-        newVel = MathUtil.clamp(newVel, -maxVelRPS, maxVelRPS);
-
-        if (newVel > 0) {
-            if (MathUtil.isNear(softForwardLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = MathUtil.clamp(
-                    newVel, 0,
-                    Math.sqrt(
-                        maxVelRPS * maxVelRPS - 2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
-                                                    (newPos - softForwardLimit + MAX_DECEL_PADDING.in(Rotations))
-                    )
-                );
-            }
-        } else if (newVel < 0) {
-            if (MathUtil.isNear(softReverseLimit, newPos, MAX_DECEL_PADDING.in(Rotations))) {
-                newVel = -MathUtil.clamp(
-                    newVel,
-                    -Math.sqrt(
-                        maxVelRPS * maxVelRPS + 2 * MAX_ACC.in(RotationsPerSecondPerSecond) *
-                                                    (newPos - softReverseLimit - MAX_DECEL_PADDING.in(Rotations))
-                    ),
-                    0
-                );
-            }
-        }
-
-        return new State(newPos, newVel);
-    }
-
-    /**
-     * Converts a turret-relative {@link Angle} to a robot-relative one
-     *
-     * @param input the turret-relative position to be converted
-     * @return a robot-relative equivalent of the input, calculated by adding
-     *         {@link #ZERO_OFFSET}
-     */
-    public static Angle turretRelToRobotRel(Angle input) {
-        return Rotations.of(MathUtil.inputModulus(input.plus(ZERO_OFFSET).in(Rotations), 0, 1));
-    }
-
-    /**
-     * Converts a robot-relative {@link Angle} to a turret-relative one
-     *
-     * @param input the robot-relative position to be converted
-     * @return a turret-relative equivalent of the input, calculated by subtracting
-     *         {@link #ZERO_OFFSET}
-     */
-    public static Angle robotRelToTurretRel(Angle input) {
-        return Rotations.of(MathUtil.inputModulus(input.minus(ZERO_OFFSET).in(Rotations), 0, 1));
-    }
-
-    public static boolean isInDeadZone(Angle input) {
-        return !robotRelToTurretRel(input).isNear(formatInputPosRobotRel(input), Degrees.of(0.2));
-    }
-
-    public static boolean isInDynamicDeadZone(Angle input) {
-        return !robotRelToTurretRel(input).isNear(formatInputPosRobotRel(input), DYNAMIC_TOLERANCE);
-    }
 }

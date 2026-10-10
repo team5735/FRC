@@ -59,7 +59,7 @@ public class TurretAimingTest implements OpMode {
 
     @Override
     public void teleopInit() {
-        if (!turret.getZeroStatus()) {
+        if (!turret.isZeroed()) {
             CommandScheduler.getInstance().schedule(turret.zeroSequence());
         }
 
@@ -70,7 +70,7 @@ public class TurretAimingTest implements OpMode {
 
     @Override
     public void autonomousInit() {
-        if (!turret.getZeroStatus()) {
+        if (!turret.isZeroed()) {
             CommandScheduler.getInstance().schedule(turret.zeroSequence());
         }
 
