@@ -7,6 +7,8 @@ import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.networktables.NetworkTableType;
 import org.wpilib.networktables.NetworkTableValue;
 import org.wpilib.networktables.NetworkTablesJNI;
+import org.wpilib.telemetry.TelemetryRegistry;
+import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.tunable.Tunable;
 import org.wpilib.tunable.TunableBase;
 import org.wpilib.tunable.TunableBoolean;
@@ -743,6 +745,8 @@ public class NTable {
     public <T> void listen(String name, Consumer<T> consumer, Class<T> classType) {
         tunable(name, null, consumer, classType, TunableConfig.of(TunableOption.GET_ON_CHANGE));
     }
+
+    public TelemetryTable telemetryTable() { return TelemetryRegistry.getTable(getPath()); }
 
     /** {@return whether the given name is present in this NTable with that type} */
     public boolean existsAs(String name, NetworkTableType desiredType) {
