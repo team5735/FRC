@@ -1,8 +1,8 @@
 package first.robot;
 
-import org.wpilib.math.geometry.Rotation2d;
-
 import com.ctre.phoenix6.CANBus;
+
+import org.wpilib.math.geometry.Rotation2d;
 
 public class IDs {
     public static final CANBus DEFAULT_CANBUS = new CANBus("can_s2");

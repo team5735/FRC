@@ -85,7 +85,8 @@ public class LimelightMechanism implements Mechanism {
         lltable = NTable.root(limelightName);
     }
 
-    public record RawFiducial(double ambiguity, Distance distToCamera) {}
+    public record RawFiducial(double ambiguity, Distance distToCamera) {
+    }
 
     public class PoseEstimate {
         public RawFiducial[] fiducials;
@@ -181,10 +182,10 @@ public class LimelightMechanism implements Mechanism {
 
         if (estimate.pose2d.getTranslation().getX() < conservativeRobotRadius ||
             estimate.pose2d.getTranslation().getX() >
-                (FieldConstants.FIELD_LENGTH_X.in(Meters) -conservativeRobotRadius) ||
+                (FieldConstants.FIELD_LENGTH_X.in(Meters) - conservativeRobotRadius) ||
             estimate.pose2d.getTranslation().getY() < conservativeRobotRadius ||
             estimate.pose2d.getTranslation().getY() >
-                (FieldConstants.FIELD_LENGTH_Y.in(Meters) -conservativeRobotRadius))
+                (FieldConstants.FIELD_LENGTH_Y.in(Meters) - conservativeRobotRadius))
         {
             this.table.sub("checks").set("in field", false);
             accepted = false;
