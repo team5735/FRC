@@ -27,7 +27,7 @@ import org.wpilib.units.measure.Distance;
 
 import java.util.Arrays;
 
-import first.robot.constants.FieldConstants;
+import first.robot.FieldConstants;
 import first.robot.util.NTable;
 
 public class LimelightMechanism implements Mechanism {
