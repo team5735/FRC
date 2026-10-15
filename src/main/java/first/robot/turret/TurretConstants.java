@@ -1,4 +1,4 @@
-package first.robot.mechanisms.turret;
+package first.robot.turret;
 
 import static org.wpilib.units.Units.Degrees;
 import static org.wpilib.units.Units.Rotations;

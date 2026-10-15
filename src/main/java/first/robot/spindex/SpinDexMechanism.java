@@ -1,4 +1,4 @@
-package first.robot.mechanisms.spindex;
+package first.robot.spindex;
 
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;

@@ -1,4 +1,4 @@
-package first.robot.mechanisms.climber;
+package first.robot.climber;
 
 public class ClimberConstants {
     public static final double RETRACT_VOLTS = 5.0;

@@ -1,8 +1,8 @@
-package frc.robot.constants;
+package first.robot.launcher;
 
-import static edu.wpi.first.units.Units.RPM;
+import static org.wpilib.units.Units.RPM;
 
-import edu.wpi.first.units.measure.AngularVelocity;
+import org.wpilib.units.measure.AngularVelocity;
 
 public class LauncherConstants {
     public static final double RPM_TOLERANCE = 35;  // 35 is 1% of expected RPM

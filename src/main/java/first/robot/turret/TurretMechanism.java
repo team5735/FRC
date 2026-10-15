@@ -1,4 +1,4 @@
-package first.robot.mechanisms.turret;
+package first.robot.turret;
 
 import static org.wpilib.units.Units.Amps;
 import static org.wpilib.units.Units.Degrees;
@@ -49,9 +49,6 @@ import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
 import first.robot.util.SysIdRoutine;
-
-import frc.robot.constants.robot.RobotConstants;
-import frc.robot.util.TunableProfiledPIDController;
 
 public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private final TalonFX kraken = new TalonFX(Constants.TURRET_MOTOR_ID);

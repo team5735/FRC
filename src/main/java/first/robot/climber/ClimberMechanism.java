@@ -1,4 +1,4 @@
-package first.robot.mechanisms.climber;
+package first.robot.climber;
 
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.hardware.TalonFX;

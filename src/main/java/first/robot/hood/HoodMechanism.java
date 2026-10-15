@@ -1,4 +1,4 @@
-package first.robot.mechanisms.hood;
+package first.robot.hood;
 
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.AnalogInput;

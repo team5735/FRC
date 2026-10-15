@@ -5,7 +5,7 @@ import org.wpilib.opmode.PeriodicOpMode;
 import org.wpilib.opmode.Utility;
 
 import first.robot.Robot;
-import first.robot.mechanisms.example.ExampleMechanism;
+import first.robot.example.ExampleMechanism;
 
 @Utility(name = "Example Mechanism Test", group = "Testers")
 public class ExampleMechanismTest extends PeriodicOpMode {

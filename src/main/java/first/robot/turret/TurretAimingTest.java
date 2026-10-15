@@ -1,4 +1,4 @@
-package first.robot.mechanisms.turret;
+package first.robot.turret;
 
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.opmode.OpMode;
@@ -6,7 +6,7 @@ import org.wpilib.opmode.Utility;
 import org.wpilib.telemetry.Telemetry;
 
 import first.robot.Robot;
-import first.robot.mechanisms.limelight.LimelightMechanism;
+import first.robot.limelight.LimelightMechanism;
 
 @Utility(name = "Turret aiming test", group = "Testers")
 public class TurretAimingTest implements OpMode {

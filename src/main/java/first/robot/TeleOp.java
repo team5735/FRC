@@ -7,7 +7,7 @@ package first.robot;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Teleop;
 
-import first.robot.mechanisms.turret.TurretMechanism;
+import first.robot.turret.TurretMechanism;
 
 @Teleop
 public class TeleOp implements OpMode {
