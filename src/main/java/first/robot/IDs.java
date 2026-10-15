@@ -2,7 +2,11 @@ package first.robot;
 
 import org.wpilib.math.geometry.Rotation2d;
 
+import com.ctre.phoenix6.CANBus;
+
 public class IDs {
+    public static final CANBus DEFAULT_CANBUS = new CANBus("can_s2");
+
     // set this to true to enable Timer()'s to publish their profiling times to network tables
     // this should be false during competition
     public static final Boolean enableNTableTimerBasedProfiling = true;

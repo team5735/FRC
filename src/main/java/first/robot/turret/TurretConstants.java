@@ -6,8 +6,6 @@ import static org.wpilib.units.Units.RotationsPerSecond;
 import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
 
 import org.wpilib.math.trajectory.TrapezoidProfile;
-import org.wpilib.math.trajectory.TrapezoidProfile.State;
-import org.wpilib.math.util.MathUtil;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularAcceleration;
 import org.wpilib.units.measure.AngularVelocity;

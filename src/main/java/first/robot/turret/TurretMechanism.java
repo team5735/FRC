@@ -22,8 +22,6 @@ import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.Trigger;
-import org.wpilib.driverstation.DriverStation;
-import org.wpilib.driverstation.MatchType;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.math.controller.ProfiledPIDController;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
@@ -48,10 +46,11 @@ import java.util.function.Supplier;
 import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
+import first.robot.RobotConstants;
 import first.robot.util.SysIdRoutine;
 
 public class TurretMechanism implements Mechanism, TelemetryLoggable {
-    private final TalonFX kraken = new TalonFX(Constants.TURRET_MOTOR_ID);
+    private final TalonFX kraken = new TalonFX(IDs.TURRET_MOTOR_ID, IDs.DEFAULT_CANBUS);
     private final DigitalInput hallLimit = new DigitalInput(IDs.TURRET_LIMIT_PIN);
     public final Trigger limitTrigger = new Trigger(() -> !hallLimit.get());
     public boolean isZeroed = false;
@@ -321,7 +320,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        double newVel = pid.getSetpoint().velocity;
                        double ffOut = (!MathUtil.isNear(0, newVel, 0.075))
                                           ? ff.calculate(newVel, (newVel - prevVel) / 0.05)
-                                      : (!isAtGoalPos()) ? Math.copySign(KS, pidOut)
+                                      : (!isAtGoalPos()) ? Math.copySign(TurretConstants.KS, pidOut)
                                                          : 0;
                        this.table.log("feedforward_out", ffOut);
 
@@ -348,7 +347,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                    pid.reset(new State(
                        getAngleTurretRel().in(Rotations), kraken.getVelocity().getValue().in(RotationsPerSecond)
                    ));
-                   pid.setGoal(new State(TurretConstants.formatInputPosRobotRel(goal).in(Rotations), 0));
+                   pid.setGoal(new State(formatInputPosRobotRel(goal).in(Rotations), 0));
                    prevVel = kraken.getVelocity().getValue().in(RotationsPerSecond);
 
                    while (true) {
@@ -494,7 +493,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     public Pose2d getMechanismPose() {
         Pose2d robotPoseInField = robotPoseSupplier.get();
         return new Pose2d(
-            driveConstants.getRobotToTurretCenter()
+            driveConstants.robotToTurretCenter()
                 .rotateBy(robotPoseInField.getRotation())
                 .plus(robotPoseInField.getTranslation()),
             getRotation().plus(robotPoseInField.getRotation())
@@ -516,7 +515,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     public boolean isDynamicAimedAt(Angle robotRelTarget) {
         return MathUtil.isNear(
             robotRelToTurretRel(robotRelTarget).in(Rotations), getAngleTurretRel().in(Rotations),
-            DYNAMIC_TOLERANCE.in(Rotations)
+            TurretConstants.DYNAMIC_TOLERANCE.in(Rotations)
         );
     }
 

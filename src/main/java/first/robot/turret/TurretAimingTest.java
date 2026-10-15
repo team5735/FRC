@@ -1,5 +1,9 @@
 package first.robot.turret;
 
+import static org.wpilib.units.Units.Rotations;
+
+import org.wpilib.command3.Command;
+import org.wpilib.command3.Scheduler;
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
@@ -29,52 +33,41 @@ public class TurretAimingTest implements OpMode {
 
         drivetrain.setDefaultCommand(drivetrain.joystickDriveCommand(
             ()
-                -> controller.getLeftX(),
+                -> robot.port0.getLeftX(),
             ()
-                -> controller.getLeftY(),
+                -> robot.port0.getLeftY(),
             ()
-                -> controller.getLeftTriggerAxis(),
+                -> robot.port0.getLeftTriggerAxis(),
             ()
-                -> controller.getRightTriggerAxis(),
-            () -> controller.getHID().getYButton(), () -> controller.getHID().getStartButton()
+                -> robot.port0.getRightTriggerAxis(),
+            () -> robot.port0.getHID().getYButton(), () -> robot.port0.getHID().getStartButton()
         ));
 
-        controller.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
-        controller.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
-        controller.rightBumper().whileTrue(turret.trackRobotRel(() -> {
-            double x = controller.getRightX();
-            double y = controller.getRightY();
+        robot.port0.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
+        robot.port0.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
+        robot.port0.rightBumper().whileTrue(turret.trackRobotRel(() -> {
+            double x = robot.port0.getRightX();
+            double y = robot.port0.getRightY();
             return new Rotation2d(-y, -x).getMeasure();
         }));
-        controller.leftBumper().whileTrue(LaunchCalculator.dryAimTurret(LaunchGoal.SCORE, turret, drivetrain));
+        robot.port0.leftBumper().whileTrue(LaunchCalculator.dryAimTurret(LaunchGoal.SCORE, turret, drivetrain));
 
-        controller.x().whileTrue(turret.zeroSequence());
-        controller.povUp().whileTrue(turret.sysId());
-        controller.povDown().onTrue(Commands.runOnce(turret::remakePID, turret));
+        robot.port0.x().whileTrue(turret.zeroSequence());
+        robot.port0.dpadUp().whileTrue(turret.sysId());
+        robot.port0.dpadDown().onTrue(Command.requiring(turret).executing(_ -> turret.remakePID()).named("remake PID"));
 
-        for (LimelightSubsystem limelight : limelights) {
+        for (LimelightMechanism limelight : limelights) {
             limelight.setIMUToPigeon();
         }
     }
 
     @Override
-    public void teleopInit() {
+    public void start() {
         if (!turret.isZeroed()) {
-            CommandScheduler.getInstance().schedule(turret.zeroSequence());
+            Scheduler.getDefault().schedule(turret.zeroSequence());
         }
 
-        for (LimelightSubsystem limelight : limelights) {
-            limelight.setIMUMode(3);
-        }
-    }
-
-    @Override
-    public void autonomousInit() {
-        if (!turret.isZeroed()) {
-            CommandScheduler.getInstance().schedule(turret.zeroSequence());
-        }
-
-        for (LimelightSubsystem limelight : limelights) {
+        for (LimelightMechanism limelight : limelights) {
             limelight.setIMUMode(3);
         }
     }

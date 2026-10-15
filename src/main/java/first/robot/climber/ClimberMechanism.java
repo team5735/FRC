@@ -4,7 +4,6 @@ import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.opmode.OpMode;
@@ -16,7 +15,7 @@ import first.robot.IDs;
 import first.robot.Robot;
 
 public class ClimberMechanism implements Mechanism, TelemetryLoggable {
-    public final TalonFX talon = new TalonFX(IDs.CLIMB_TALON_ID);
+    public final TalonFX talon = new TalonFX(IDs.CLIMB_TALON_ID, IDs.DEFAULT_CANBUS);
 
     private final DigitalInput limitDown = new DigitalInput(IDs.CLIMB_UPPER_LIMIT_PIN);
     private final DigitalInput limitUp = new DigitalInput(IDs.CLIMB_LOWER_LIMIT_PIN);
