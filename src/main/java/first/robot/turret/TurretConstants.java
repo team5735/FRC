@@ -11,7 +11,7 @@ import org.wpilib.units.measure.AngularAcceleration;
 import org.wpilib.units.measure.AngularVelocity;
 
 public class TurretConstants {
-    public static final double GEAR_REDUCTION = 200 / 20;  // initial gear 20T, secondary gear 200T
+    public static final double GEAR_REDUCTION = 200. / 20;  // initial gear 20T, secondary gear 200T
 
     // PID gains (with motion profiling)
     public static final double KP = 8.5;

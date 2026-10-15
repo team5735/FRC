@@ -58,6 +58,11 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
         runFeeder();
     }
 
+    public void reverse() {
+        reverseWheel();
+        reverseFeeder();
+    }
+
     public void stop() {
         stopWheel();
         stopFeeder();
@@ -105,10 +110,8 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
     @Utility(name = "Spindex Tester", group = "Testers")
     public static class Tester implements OpMode {
         private final SpinDexMechanism spindex = new SpinDexMechanism();
-        private Robot robot;
 
         public Tester(Robot robot) {
-            this.robot = robot;
             robot.port0.a().whileTrue(spindex.getRun());
         }
     }

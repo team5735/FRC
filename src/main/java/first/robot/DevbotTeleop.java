@@ -7,15 +7,19 @@ package first.robot;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Teleop;
 
+import first.robot.drivetrain.DevbotTunerConstants;
+import first.robot.drivetrain.DrivetrainMechanism;
 import first.robot.turret.TurretMechanism;
 
 @Teleop
-public class TeleOp implements OpMode {
+public class DevbotTeleop implements OpMode {
     private Robot robot;
 
-    private TurretMechanism turret = new TurretMechanism(() -> null, () -> true);
+    private DrivetrainMechanism drivetrain = DevbotTunerConstants.createDrivetrain();
 
-    public TeleOp(Robot robot) { this.robot = robot; }
+    private TurretMechanism turret = new TurretMechanism(drivetrain::getEstimatedPosition, () -> true);
+
+    public DevbotTeleop(Robot robot) { this.robot = robot; }
 
     private void driverBindings() {}
 }

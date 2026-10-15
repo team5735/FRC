@@ -1,10 +1,8 @@
-// Currently, there is no 2027 library for CTRE devices.
-/*
 // Copyright (c) FIRST and other WPILib contributors.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.subsystems;
+package first.robot.launcher;
 
 import static org.wpilib.units.Units.Amps;
 import static org.wpilib.units.Units.RPM;
@@ -19,44 +17,44 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import org.wpilib.command3.Command;
+import org.wpilib.command3.Mechanism;
 import org.wpilib.math.controller.BangBangController;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
+import org.wpilib.opmode.OpMode;
+import org.wpilib.opmode.Utility;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
+import org.wpilib.tunable.TunableDouble;
 import org.wpilib.units.measure.AngularVelocity;
-import org.wpilib.wpilibj.smartdashboard.SmartDashboard;
-import org.wpilib.wpilibj2.command.Command;
-import org.wpilib.wpilibj2.command.SubsystemBase;
-import org.wpilib.wpilibj2.command.sysid.SysIdRoutine;
-import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Config;
-import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import org.wpilib.wpilibj2.command.sysid.SysIdRoutine.Mechanism;
 
 import java.util.function.Supplier;
 
-import frc.robot.PartialRobot;
-import frc.robot.constants.Constants;
-import frc.robot.constants.LauncherConstants;
-import frc.robot.util.NTable;
+import first.robot.IDs;
+import first.robot.Robot;
+import first.robot.intake.IntakeMechanism;
+import first.robot.spindex.SpinDexMechanism;
+import first.robot.util.NTable;
+import first.robot.util.SysIdRoutine;
 
-public class LauncherSubsystem extends SubsystemBase {
-    private final TalonFX krakenLeft = new TalonFX(Constants.LAUNCHER_LEFT_KRAKEN_ID);
-    private final TalonFX krakenRight = new TalonFX(Constants.LAUNCHER_RIGHT_KRAKEN_ID);
+public class LauncherMechanism implements Mechanism, TelemetryLoggable {
+    private final TalonFX krakenLeft = new TalonFX(IDs.LAUNCHER_LEFT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
+    private final TalonFX krakenRight = new TalonFX(IDs.LAUNCHER_RIGHT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
 
     private final BangBangController bangbang = new BangBangController();
-    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(LauncherConstants.KS,
-            LauncherConstants.KV);
+    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(LauncherConstants.KS, LauncherConstants.KV);
 
     private final NTable table = NTable.root("launcher");
 
     private double setpoint = 0;
 
-    public LauncherSubsystem() {
-        super();
-        SmartDashboard.putNumber("shooter_volts", LauncherConstants.LAUNCHER_VOLTS);
-        krakenLeft.getConfigurator()
-                .apply(new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive)
-                        .withNeutralMode(NeutralModeValue.Coast));
+    public LauncherMechanism() {
+        this.table.set("shooter_volts", LauncherConstants.LAUNCHER_VOLTS);
+        krakenLeft.getConfigurator().apply(new MotorOutputConfigs()
+                                               .withInverted(InvertedValue.CounterClockwise_Positive)
+                                               .withNeutralMode(NeutralModeValue.Coast));
         krakenLeft.getConfigurator().apply(new CurrentLimitsConfigs().withSupplyCurrentLimit(Amps.of(30)));
-        krakenRight.setControl(new Follower(Constants.LAUNCHER_LEFT_KRAKEN_ID, MotorAlignmentValue.Opposed));
+        krakenRight.setControl(new Follower(IDs.LAUNCHER_LEFT_KRAKEN_ID, MotorAlignmentValue.Opposed));
         krakenRight.getConfigurator().apply(new CurrentLimitsConfigs().withSupplyCurrentLimit(Amps.of(30)));
 
         table.ensure("!! threshold", LauncherConstants.BANGBANG_THRESHOLD);
@@ -65,13 +63,11 @@ public class LauncherSubsystem extends SubsystemBase {
     }
 
     public double getRPM() {
-        SmartDashboard.putNumber("launcher/motorRPS", krakenLeft.getVelocity().getValueAsDouble());
-        return krakenLeft.getVelocity().getValue().in(RPM) * LauncherConstants.GEARING;
+        this.table.set("motorRPS", krakenLeft.getVelocity().getValueAsDouble());
+        return krakenLeft.getVelocity().getValue().in(RPM) *LauncherConstants.GEARING;
     }
 
-    public double getTargetRPM(){
-        return this.setpoint;
-    }
+    public double getTargetRPM() { return this.setpoint; }
 
     private void setTargetRPM(double rpm) {
         this.setpoint = rpm;
@@ -81,29 +77,22 @@ public class LauncherSubsystem extends SubsystemBase {
 
     public void usePID() {
         double output = (bangbang.getSetpoint() != 0)
-                ? bangbang.calculate(getRPM()) * table.getDouble("!! mult") + ff.calculate(setpoint)
-                : 0;
-        SmartDashboard.putNumber("launcher/output", output);
+                            ? bangbang.calculate(getRPM()) * table.getDouble("!! mult") + ff.calculate(setpoint)
+                            : 0;
+        this.table.set("output", output);
         krakenLeft.setVoltage(output);
     }
 
     @Override
-    // Multiplying krakenMotor by 60 to turn rotations per second into rotations per
-    // minute (RPM)
-    public void periodic() {
-        double currentRPM = getRPM();
-        this.table.set("speed rpm", currentRPM);
-        this.table.set("setpoint", setpoint);
-        this.table.set("!! setpoint", bangbang.getSetpoint());
+    public void logTo(TelemetryTable table) {
+        table.log("speed rpm", getRPM());
+        table.log("setpoint", setpoint);
+        table.log("!! setpoint", bangbang.getSetpoint());
     }
 
-    public Command getResting() {
-        return runOnce(() -> krakenLeft.setVoltage(0)).withName("zero launcher voltage");
-    }
+    public Command getResting() { return run(_ -> krakenLeft.setVoltage(0)).named("launcher: do not"); }
 
-    public void stop() {
-        krakenLeft.setVoltage(0);
-    }
+    public void stop() { krakenLeft.setVoltage(0); }
 
     public void retunePID() {
         bangbang.setSetpoint(setpoint * table.getDouble("!! threshold"));
@@ -111,73 +100,100 @@ public class LauncherSubsystem extends SubsystemBase {
     }
 
     public Command getLaunchFuel(AngularVelocity speed) {
-        return runOnce(this::retunePID)
-                .andThen(startRun(() -> setTargetRPM(speed.in(RPM)), this::usePID))
-                .withName("Launch Fuel at " + speed);
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(speed.in(RPM));
+
+                   while (true) {
+                       usePID();
+                       coro.yield();
+                   }
+               }
+        ).named("launcher: with rpm=" + speed);
     }
 
-    public Command getLaunchFuelSupplier(Supplier<Double> supplier) {
-        return runOnce(this::retunePID)
-                .andThen(startRun(() -> setTargetRPM(supplier.get()),
-                        this::usePID))
-                .withName("Launch Fuel /tuning/rpm");
-    }
+    private final TunableDouble rpmTunable = table.tunableDouble("rpm");
 
     public Command getLaunchFuelNT() {
-        return runOnce(this::retunePID)
-                .andThen(startRun(() -> setTargetRPM(table.getDouble("rpm")),
-                        this::usePID))
-                .withName("Launch Fuel /tuning/rpm");
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(this.rpmTunable.get());
+
+                   while (true) {
+                       usePID();
+                       coro.yield();
+                   }
+               }
+        ).named("launcher: with rpm=" + this.table.getPath() + "/rpm");
     }
 
-    public Command getDynamicLaunch(Supplier<AngularVelocity> speedSupplier) {
-        return startRun(this::retunePID, () -> {
-            setTargetRPM(speedSupplier.get().in(RPM));
-            usePID();
-        }).withName("Dynamic Launching");
+    public Command getLaunchFuelSupplier(Supplier<AngularVelocity> rpmSupplier) {
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(rpmSupplier.get().in(RPM));
+
+                   while (true) {
+                       usePID();
+                       coro.yield();
+                   }
+               }
+        ).named("launcher: with rpm from supplier");
     }
 
-    public Command getFedLaunch(SpinDexSubsystem spindex, AngularVelocity speed) {
-        return this.getLaunchFuel(speed).until(bangbang::atSetpoint)
-                .andThen(this.getLaunchFuel(speed).alongWith(spindex.getRun()));
+    public Command getFedLaunch(SpinDexMechanism spindex, AngularVelocity speed) {
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(speed.in(RPM));
+
+                   boolean hasHitSetpoint = false;
+                   while (true) {
+                       if (!hasHitSetpoint && this.atSetpoint()) hasHitSetpoint = true;
+
+                       usePID();
+                       if (hasHitSetpoint) spindex.run();
+                       coro.yield();
+                   }
+               })
+            .whenCanceled(spindex::stop)
+            .named("launcher: fed launch");
     }
 
+    @SuppressWarnings("unused")
     private SysIdRoutine routine = new SysIdRoutine(
-            new Config(Volts.of(0.5).per(Second), Volts.of(4), null, null),
-            new Mechanism(v -> krakenLeft.setVoltage(v.in(Volts)), log -> {
-                log.motor("launcher").voltage(krakenLeft.getMotorVoltage().getValue())
-                        .angularVelocity(RPM.of(getRPM())).angularPosition(krakenLeft.getPosition().getValue());
-            }, this));
+        new SysIdRoutine.Config(
+            Volts.of(0.5).per(Second), Volts.of(4), null, null,
+            v
+            -> krakenLeft.setVoltage(v.in(Volts)),
+            log
+            -> {
+                log.motor("launcher")
+                    .voltage(krakenLeft.getMotorVoltage().getValue())
+                    .angularVelocity(RPM.of(getRPM()))
+                    .angularPosition(krakenLeft.getPosition().getValue());
+            },
+            "launcher"
+        ),
+        this
+    );
 
-    public Command sysIdDynamic(Direction direction) {
-        return routine.dynamic(direction);
-    }
+    public boolean atSetpoint() { return getRPM() > bangbang.getSetpoint(); }
 
-    public Command sysIdQuasistatic(Direction direction) {
-        return routine.quasistatic(direction);
-    }
+    @Utility
+    public static class Tester implements OpMode {
+        private final SpinDexMechanism spindex = new SpinDexMechanism();
+        private final LauncherMechanism launcher = new LauncherMechanism();
+        private final IntakeMechanism intake = new IntakeMechanism();
 
-    public Command runAtSpeed(AngularVelocity speed) {
-        return startRun(() -> bangbang.setSetpoint(speed.in(RPM)), this::usePID);
-    }
-
-    public boolean atSetpoint() {
-        return getRPM() > bangbang.getSetpoint();
-    }
-
-    public static class Tester extends PartialRobot {
-        private final SpinDexSubsystem spindex = new SpinDexSubsystem();
-        private final LauncherSubsystem launcher = new LauncherSubsystem();
-        private final IntakeSubsystem intake = new IntakeSubsystem();
-
-        public Tester() {
-            super();
+        public Tester(Robot robot) {
             launcher.setDefaultCommand(launcher.getLaunchFuel(RPM.of(0)));
 
-            controller.a().whileTrue(launcher.getFedLaunch(spindex, RPM.of(3125)));
-            controller.x().whileTrue(spindex.startEnd(spindex::reverseWheel, spindex::stopWheel));
-            controller.rightBumper().whileTrue(intake.getIntakeForwardRollCommand());
+            robot.port0.a().whileTrue(launcher.getFedLaunch(spindex, RPM.of(3125)));
+            robot.port0.x()
+                .onTrue(spindex.run(_ -> spindex.reverse()).named("spindex: reverse"))
+                .onFalse(spindex.run(_ -> spindex.stop()).named("spindex: stop"));
+            robot.port0.rightBumper()
+                .onTrue(intake.run(_ -> intake.forwardRoll()).named("intake: roll"))
+                .onFalse(intake.run(_ -> intake.stopRoll()).named("intake: stop"));
         }
     }
 }
-*/

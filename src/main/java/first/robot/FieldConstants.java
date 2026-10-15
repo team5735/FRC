@@ -179,6 +179,9 @@ public class FieldConstants {
     public static final int RED_TOWER_TAG_1 = 15;
     public static final int RED_TOWER_TAG_2 = 16;
 
+    public static final Rotation2d BLUE_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.ZERO;
+    public static final Rotation2d RED_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.k180deg;
+
     /////////////////////////////
     // CLIMBING AUTO WAYPOINTS //
     /////////////////////////////

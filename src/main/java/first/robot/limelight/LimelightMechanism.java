@@ -11,6 +11,8 @@ import static org.wpilib.units.Units.Meters;
 import static org.wpilib.units.Units.Radians;
 import static org.wpilib.units.Units.RadiansPerSecond;
 
+import java.util.Arrays;
+
 import org.wpilib.command3.Mechanism;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Pose3d;
@@ -21,13 +23,14 @@ import org.wpilib.math.linalg.VecBuilder;
 import org.wpilib.math.linalg.Vector;
 import org.wpilib.math.numbers.N3;
 import org.wpilib.math.util.Units;
-import org.wpilib.system.Timer;
-import org.wpilib.telemetry.Telemetry;
+import org.wpilib.networktables.NetworkTableEntry;
 import org.wpilib.units.measure.Distance;
 
-import java.util.Arrays;
+import com.ctre.phoenix6.Utils;
 
+import first.robot.DrivetrainTelemetry;
 import first.robot.FieldConstants;
+import first.robot.drivetrain.DrivetrainMechanism;
 import first.robot.util.NTable;
 
 public class LimelightMechanism implements Mechanism {
@@ -66,6 +69,9 @@ public class LimelightMechanism implements Mechanism {
 
     private final NTable lltable;
 
+    /** add this to return-values of {@link NetworkTableEntry#getLastChange()} */
+    private static double epochDifference = Double.NaN;
+
     public LimelightMechanism(DrivetrainMechanism drivetrain, String limelightName) {
         super();
 
@@ -83,10 +89,17 @@ public class LimelightMechanism implements Mechanism {
         limits.set("(stddevs) angular velocity", DegreesPerSecond.of(1).in(RadiansPerSecond));
 
         lltable = NTable.root(limelightName);
+
+        double phoenixTime = Utils.getCurrentTimeSeconds();
+        this.table.set("dummy for epoch", 0);
+        double networkTablesTime = this.table.getEntry("dummy for epoch").getLastChange();
+        double thisEpochDifference = phoenixTime - networkTablesTime;
+        if (!Double.isNaN(epochDifference)) System.out.println("old epochDifference=" + epochDifference);
+        epochDifference = thisEpochDifference;
+        System.out.println("epochDifference=" + epochDifference);
     }
 
-    public record RawFiducial(double ambiguity, Distance distToCamera) {
-    }
+    public record RawFiducial(double ambiguity, Distance distToCamera) {}
 
     public class PoseEstimate {
         public RawFiducial[] fiducials;
@@ -166,26 +179,26 @@ public class LimelightMechanism implements Mechanism {
         }
         this.table.sub("checks").set("could retrieve pose estimate", true);
 
-        Telemetry.field.getObject(limelightName).setPose(estimate.pose2d);
+        DrivetrainTelemetry.field.getObject(limelightName).setPose(estimate.pose2d);
 
         boolean accepted = true;
 
         accepted = check(estimate.pose3d.getMeasureZ().in(Meters), "distance from ground") && accepted;
 
         // pose estimate is off the field
-        double conservativeRobotRadius = (Math.max(
-                                              drivetrain.constants.getRobotTotalLength().in(Meters),
-                                              drivetrain.constants.getRobotTotalWidth().in(Meters)
-                                          ) *
-                                          Math.sqrt(2)) /
-                                         2;
+        double conservativeRobotRadius =
+            (Math.max(
+                 drivetrain.constants.robotTotalLength().in(Meters), drivetrain.constants.robotTotalWidth().in(Meters)
+             ) *
+             Math.sqrt(2)) /
+            2;
 
         if (estimate.pose2d.getTranslation().getX() < conservativeRobotRadius ||
             estimate.pose2d.getTranslation().getX() >
-                (FieldConstants.FIELD_LENGTH_X.in(Meters) - conservativeRobotRadius) ||
+                (FieldConstants.FIELD_LENGTH_X.in(Meters) -conservativeRobotRadius) ||
             estimate.pose2d.getTranslation().getY() < conservativeRobotRadius ||
             estimate.pose2d.getTranslation().getY() >
-                (FieldConstants.FIELD_LENGTH_Y.in(Meters) - conservativeRobotRadius))
+                (FieldConstants.FIELD_LENGTH_Y.in(Meters) -conservativeRobotRadius))
         {
             this.table.sub("checks").set("in field", false);
             accepted = false;
@@ -228,13 +241,10 @@ public class LimelightMechanism implements Mechanism {
     private double applyPenalties(PoseEstimate estimate) {
         double distPenalty = penalize(estimate.distToCamera, "distance");
 
-        double speedPenalty = penalize(
-            Math.hypot(drivetrain.getState().Speeds.vxMetersPerSecond, drivetrain.getState().Speeds.vyMetersPerSecond) *
-                5,
-            "speed"
-        );
+        double speedPenalty =
+            penalize(Math.hypot(drivetrain.getState().Velocity.vx, drivetrain.getState().Velocity.vy) * 5, "speed");
 
-        double omegaPenalty = penalize(Math.abs(drivetrain.getState().Speeds.omegaRadiansPerSecond), "omega");
+        double omegaPenalty = penalize(Math.abs(drivetrain.getState().Velocity.omega), "omega");
 
         double ambiguityPenalty =
             penalize(Arrays.stream(estimate.fiducials).mapToDouble(fiducial -> fiducial.ambiguity).sum(), "ambiguity");
@@ -271,9 +281,8 @@ public class LimelightMechanism implements Mechanism {
         stddevs.getData()[2] = Math.max(Degrees.of(0.25).in(Radians), stddevs.getData()[2]);
 
         double totalPenalty = 1;
-        if (Math.hypot(drivetrain.getState().Speeds.vxMetersPerSecond, drivetrain.getState().Speeds.vxMetersPerSecond) >
-                0.02 ||
-            Math.abs(drivetrain.getState().Speeds.omegaRadiansPerSecond) > Units.degreesToRadians(2))
+        if (Math.hypot(drivetrain.getState().Velocity.vx, drivetrain.getState().Velocity.vy) > 0.02 ||
+            Math.abs(drivetrain.getState().Velocity.omega) > Units.degreesToRadians(2))
         {
             totalPenalty = applyPenalties(estimate);
         }
@@ -293,6 +302,8 @@ public class LimelightMechanism implements Mechanism {
 
         estimateTable.set("timestamp", estimate.timestamp);
 
-        drivetrain.addVisionMeasurement(estimate.pose2d, estimate.timestamp, stddevs);
+        drivetrain.addVisionMeasurement(
+            estimate.pose2d, estimate.timestamp + LimelightMechanism.epochDifference, stddevs
+        );
     }
 }

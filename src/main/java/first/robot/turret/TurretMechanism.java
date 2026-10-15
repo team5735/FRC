@@ -46,7 +46,7 @@ import java.util.function.Supplier;
 import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
-import first.robot.RobotConstants;
+import first.robot.drivetrain.RobotConstants;
 import first.robot.util.SysIdRoutine;
 
 public class TurretMechanism implements Mechanism, TelemetryLoggable {
@@ -73,10 +73,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         new SimpleMotorFeedforward(TurretConstants.KS, TurretConstants.KV, TurretConstants.KA);
 
     public TurretMechanism(
-        Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled, Consumer<Pose2d> setTurretPose
+        Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled
     ) {
         super();
-        this.setTurretPose = setTurretPose;
         kraken.getConfigurator().apply(new TalonFXConfiguration());
         kraken.getConfigurator().apply(new MotorOutputConfigs()
                                            .withNeutralMode(NeutralModeValue.Brake)
@@ -328,6 +327,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        double voltsToSet = (!isAtGoalPos()) ? pidOut + ffOut : 0;
                        kraken.setVoltage(voltsToSet);
                        prevVel = newVel;
+
+                       coro.yield();
                    }
                })
             .whenCanceled(() -> kraken.setVoltage(0))
@@ -369,6 +370,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        if (isAtGoalPos()) voltsToSet = 0;
                        kraken.setVoltage(voltsToSet);
                        prevVel = newVel;
+
+                       coro.yield();
                    }
                })
             .whenCanceled(() -> kraken.setVoltage(0))
@@ -573,7 +576,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     @Utility
     public static class Tester implements OpMode {
-        private final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true, _ -> {});
+        private final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true);
 
         public Tester(Robot robot) {
             robot.port0.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
