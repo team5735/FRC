@@ -1,5 +1,5 @@
 package first.robot.drivetrain;
- 
+
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.units.measure.AngularVelocity;
 import org.wpilib.units.measure.Distance;
@@ -9,7 +9,7 @@ import org.wpilib.units.measure.Mass;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.path.PathConstraints;
- 
+
 public interface RobotConstants {
     public PIDConstants autoPosConstants();
     public PIDConstants autoRotConstants();

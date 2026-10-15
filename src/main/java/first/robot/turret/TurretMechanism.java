@@ -72,9 +72,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private final SimpleMotorFeedforward ff =
         new SimpleMotorFeedforward(TurretConstants.KS, TurretConstants.KV, TurretConstants.KA);
 
-    public TurretMechanism(
-        Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled
-    ) {
+    public TurretMechanism(Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled) {
         super();
         kraken.getConfigurator().apply(new TalonFXConfiguration());
         kraken.getConfigurator().apply(new MotorOutputConfigs()
@@ -277,18 +275,17 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
      *         subsystem.
      */
     public Command sysId() {
-        return run(
-                   coro -> {
-                       System.out.println("starting turret sysid");
+        return run(coro -> {
+                   System.out.println("starting turret sysid");
 
-                       routine.dynamicRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
-                       routine.dynamicRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
+                   routine.dynamicRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
+                   routine.dynamicRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
 
-                       routine.quasistaticRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
-                       routine.quasistaticRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
+                   routine.quasistaticRun(SysIdRoutine.Direction.FORWARD, coro, isAtForwardLim);
+                   routine.quasistaticRun(SysIdRoutine.Direction.REVERSE, coro, isAtReverseLim);
 
-                       System.out.println("done with turret sysid");
-                   }
+                   System.out.println("done with turret sysid");
+               }
         ).named("turret sysid");
     }
 
@@ -532,35 +529,34 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
      * @return Command that performs the aforementioned task
      */
     public Command zeroSequence() {
-        return run(
-                   coro -> {
-                       kraken.getConfigurator().apply(
-                           new SoftwareLimitSwitchConfigs()
-                               .withForwardSoftLimitEnable(false)
-                               .withForwardSoftLimitThreshold(TurretConstants.FORWARD_LIMIT_TUR_REL)
-                               .withReverseSoftLimitEnable(true)
-                               .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL)
-                       );
+        return run(coro -> {
+                   kraken.getConfigurator().apply(
+                       new SoftwareLimitSwitchConfigs()
+                           .withForwardSoftLimitEnable(false)
+                           .withForwardSoftLimitThreshold(TurretConstants.FORWARD_LIMIT_TUR_REL)
+                           .withReverseSoftLimitEnable(true)
+                           .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL)
+                   );
 
-                       kraken.setVoltage(0.75);
-                       while (!limitTrigger.getAsBoolean())
-                           coro.yield();
-                       kraken.setVoltage(-0.75);
-                       while (limitTrigger.getAsBoolean())
-                           coro.yield();
-                       kraken.setVoltage(0.65);
-                       while (!limitTrigger.getAsBoolean())
-                           coro.yield();
-                       resetAngle(TurretConstants.HALL_LIMIT_POS_BOT_REL);
+                   kraken.setVoltage(0.75);
+                   while (!limitTrigger.getAsBoolean())
+                       coro.yield();
+                   kraken.setVoltage(-0.75);
+                   while (limitTrigger.getAsBoolean())
+                       coro.yield();
+                   kraken.setVoltage(0.65);
+                   while (!limitTrigger.getAsBoolean())
+                       coro.yield();
+                   resetAngle(TurretConstants.HALL_LIMIT_POS_BOT_REL);
 
-                       kraken.getConfigurator().apply(
-                           new SoftwareLimitSwitchConfigs()
-                               .withForwardSoftLimitEnable(true)
-                               .withForwardSoftLimitThreshold(TurretConstants.FORWARD_LIMIT_TUR_REL)
-                               .withReverseSoftLimitEnable(true)
-                               .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL)
-                       );
-                   }
+                   kraken.getConfigurator().apply(
+                       new SoftwareLimitSwitchConfigs()
+                           .withForwardSoftLimitEnable(true)
+                           .withForwardSoftLimitThreshold(TurretConstants.FORWARD_LIMIT_TUR_REL)
+                           .withReverseSoftLimitEnable(true)
+                           .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL)
+                   );
+               }
         ).named("turret zero sequence");
     }
 

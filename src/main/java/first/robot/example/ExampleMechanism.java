@@ -24,15 +24,14 @@ public class ExampleMechanism implements Mechanism {
      * @return An example command.
      */
     public Command exampleCommand() {
-        return run(
-                   coroutine -> {
-                       int runCount = 0;
-                       while (true) {
-                           runCount++;
-                           System.out.println("Example command run #" + runCount);
-                           coroutine.yield();
-                       }
+        return run(coroutine -> {
+                   int runCount = 0;
+                   while (true) {
+                       runCount++;
+                       System.out.println("Example command run #" + runCount);
+                       coroutine.yield();
                    }
+               }
         ).named("Example Command");
     }
 }

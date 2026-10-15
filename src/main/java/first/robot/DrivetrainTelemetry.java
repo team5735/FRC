@@ -3,7 +3,7 @@ package first.robot;
 import static org.wpilib.units.Units.MetersPerSecond;
 import static org.wpilib.units.Units.Radians;
 
-import java.util.Arrays;
+import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.util.MathUtil;
@@ -15,7 +15,7 @@ import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.util.Color;
 import org.wpilib.util.Color8Bit;
 
-import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
+import java.util.Arrays;
 
 import first.robot.drivetrain.DrivetrainConstants;
 import first.robot.drivetrain.DrivetrainMechanism;
@@ -25,28 +25,32 @@ import first.robot.util.NTable;
 public class DrivetrainTelemetry {
     // Mechanisms to represent the swerve module states
     private final Mechanism2d[] moduleMechanisms = new Mechanism2d[] {
-            new Mechanism2d(1, 1),
-            new Mechanism2d(1, 1),
-            new Mechanism2d(1, 1),
-            new Mechanism2d(1, 1),
+        new Mechanism2d(1, 1),
+        new Mechanism2d(1, 1),
+        new Mechanism2d(1, 1),
+        new Mechanism2d(1, 1),
     };
     // A direction and length changing ligament for speed representation
     private final MechanismLigament2d[] moduleSpeeds = new MechanismLigament2d[] {
-            moduleMechanisms[0].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
-            moduleMechanisms[1].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
-            moduleMechanisms[2].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
-            moduleMechanisms[3].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
+        moduleMechanisms[0].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
+        moduleMechanisms[1].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
+        moduleMechanisms[2].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
+        moduleMechanisms[3].getRoot("RootSpeed", 0.5, 0.5).append(new MechanismLigament2d("Speed", 0.5, 0)),
     };
     // A direction changing and length constant ligament for module direction
     private final MechanismLigament2d[] moduleDirections = new MechanismLigament2d[] {
-            moduleMechanisms[0].getRoot("RootDirection", 0.5, 0.5)
-                    .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
-            moduleMechanisms[1].getRoot("RootDirection", 0.5, 0.5)
-                    .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
-            moduleMechanisms[2].getRoot("RootDirection", 0.5, 0.5)
-                    .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
-            moduleMechanisms[3].getRoot("RootDirection", 0.5, 0.5)
-                    .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
+        moduleMechanisms[0]
+            .getRoot("RootDirection", 0.5, 0.5)
+            .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
+        moduleMechanisms[1]
+            .getRoot("RootDirection", 0.5, 0.5)
+            .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
+        moduleMechanisms[2]
+            .getRoot("RootDirection", 0.5, 0.5)
+            .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
+        moduleMechanisms[3]
+            .getRoot("RootDirection", 0.5, 0.5)
+            .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.WHITE))),
     };
 
     private final double[] poseArray = new double[3];
@@ -98,25 +102,31 @@ public class DrivetrainTelemetry {
         field.getObject("turret_pose").setPose(this.turret.getMechanismPose());
 
         var modules = this.drivetrain.getModules();
-        NTable[] tables = Arrays.stream(new String[] { "FL", "FR", "BL", "BR" })
-                .map(s -> moduleNTable.sub(s))
-                .toArray(NTable[]::new);
+        NTable[] tables =
+            Arrays.stream(new String[] {"FL", "FR", "BL", "BR"}).map(s -> moduleNTable.sub(s)).toArray(NTable[] ::new);
         for (int i = 0; i < modules.length; i++) {
             var module = modules[i];
             TelemetryTable table = tables[i].telemetryTable();
 
-            table.log("steer position", Units.radiansToRotations(
-                    MathUtil.angleModulus(module.getCurrentVelocity().angle.getMeasure().in(Radians))));
-            table.log("steer setpoint", Units
-                    .radiansToRotations(MathUtil.angleModulus(module.getTargetVelocity().angle.getMeasure().in(Radians))));
+            table.log(
+                "steer position", Units.radiansToRotations(
+                                      MathUtil.angleModulus(module.getCurrentVelocity().angle.getMeasure().in(Radians))
+                                  )
+            );
+            table.log(
+                "steer setpoint",
+                Units.radiansToRotations(MathUtil.angleModulus(module.getTargetVelocity().angle.getMeasure().in(Radians)
+                ))
+            );
             table.log("drive velocity", Math.abs(state.ModuleVelocities[i].velocity));
             table.log("drive voltage", module.getDriveMotor().getMotorVoltage().getValueAsDouble());
             table.log("steer voltage", module.getSteerMotor().getMotorVoltage().getValueAsDouble());
 
             moduleSpeeds[i].setAngle(state.ModuleVelocities[i].angle);
             moduleDirections[i].setAngle(state.ModuleVelocities[i].angle);
-            moduleSpeeds[i].setLength(state.ModuleVelocities[i].velocity
-                    / (2 * DrivetrainConstants.SPEED_AT_12_VOLTS.in(MetersPerSecond)));
+            moduleSpeeds[i].setLength(
+                state.ModuleVelocities[i].velocity / (2 * DrivetrainConstants.SPEED_AT_12_VOLTS.in(MetersPerSecond))
+            );
 
             table.log("mechanism", moduleMechanisms[i]);
         }

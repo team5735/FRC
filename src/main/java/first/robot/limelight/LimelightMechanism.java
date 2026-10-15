@@ -11,7 +11,7 @@ import static org.wpilib.units.Units.Meters;
 import static org.wpilib.units.Units.Radians;
 import static org.wpilib.units.Units.RadiansPerSecond;
 
-import java.util.Arrays;
+import com.ctre.phoenix6.Utils;
 
 import org.wpilib.command3.Mechanism;
 import org.wpilib.math.geometry.Pose2d;
@@ -26,7 +26,7 @@ import org.wpilib.math.util.Units;
 import org.wpilib.networktables.NetworkTableEntry;
 import org.wpilib.units.measure.Distance;
 
-import com.ctre.phoenix6.Utils;
+import java.util.Arrays;
 
 import first.robot.DrivetrainTelemetry;
 import first.robot.FieldConstants;
