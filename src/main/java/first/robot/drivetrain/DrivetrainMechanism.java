@@ -238,8 +238,7 @@ public class DrivetrainMechanism
          * explicit disable event occurs during testing.
          */
         int qualityIndex = this.getVisionPoseAgreementQuality();
-        String asString = switch (qualityIndex)
-        {
+        String asString = switch (qualityIndex) {
             case 0 -> "whack";
             case 1 -> "poor";
             case 2 -> "fair";

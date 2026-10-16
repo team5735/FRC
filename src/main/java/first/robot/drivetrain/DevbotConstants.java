@@ -64,7 +64,7 @@ public class DevbotConstants implements RobotConstants {
     public Distance drivetrainWidth() { return Inches.of(30); }
 
     public double robotMoiKgxMxM() {
-        return robotMass().in(Kilograms) *drivetrainWidth().in(Meters) / 2 * rotKa() / openDriveKa();
+        return robotMass().in(Kilograms) * drivetrainWidth().in(Meters) / 2 * rotKa() / openDriveKa();
     }
 
     public double coefficientOfFriction() { return 1.5; }

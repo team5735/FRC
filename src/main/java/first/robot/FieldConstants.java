@@ -115,7 +115,7 @@ public class FieldConstants {
     //////////////////////
     public static final Translation2d BLUE_TRENCH_RIGHT_CENTER = new Translation2d(inch(181.56), inch(24.97));
     public static final Translation2d BLUE_TRENCH_LEFT_CENTER =
-        new Translation2d(inch(181.56), inch(FIELD_LENGTH_Y.in(Inches) -24.97));
+        new Translation2d(inch(181.56), inch(FIELD_LENGTH_Y.in(Inches) - 24.97));
     public static final Translation3d TRENCH_DIMENSION = new Translation3d(
         inch(44.4),       // TODO: incorrect, setting to RAMP X length, because the trench is just a bar
         inch(2 * 24.97),  // how wide it is to fit a bot through

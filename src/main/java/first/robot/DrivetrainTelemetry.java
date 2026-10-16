@@ -114,9 +114,9 @@ public class DrivetrainTelemetry {
                                   )
             );
             table.log(
-                "steer setpoint",
-                Units.radiansToRotations(MathUtil.angleModulus(module.getTargetVelocity().angle.getMeasure().in(Radians)
-                ))
+                "steer setpoint", Units.radiansToRotations(
+                                      MathUtil.angleModulus(module.getTargetVelocity().angle.getMeasure().in(Radians))
+                                  )
             );
             table.log("drive velocity", Math.abs(state.ModuleVelocities[i].velocity));
             table.log("drive voltage", module.getDriveMotor().getMotorVoltage().getValueAsDouble());

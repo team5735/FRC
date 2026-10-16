@@ -66,7 +66,7 @@ public class CompbotConstants implements RobotConstants {
     public Distance drivetrainWidth() { return Inches.of(29.5); }
 
     public double robotMoiKgxMxM() {
-        return robotMass().in(Kilograms) *drivetrainWidth().in(Meters) / 2 * rotKa() /
+        return robotMass().in(Kilograms) * drivetrainWidth().in(Meters) / 2 * rotKa() /
             CompbotTunerConstants.DEFAULT_DRIVE_CONSTANTS.kA;
     }
 

@@ -71,24 +71,26 @@ public class IntakeMechanism implements Mechanism, TelemetryLoggable {
     public Angle getSlapdownPosition() { return intakeSlapdown.getPosition().getValue(); }
 
     public Command getLiftCommand() {
-        return run(coro -> {
-                   while (!getSlapdownPosition().gte(IntakeConstants.UPPER_RELEASE_POS)) {
-                       runSlapdown(IntakeConstants.LIFT_VEL);
-                       coro.yield();
+        return run(
+                   coro -> {
+                       while (!getSlapdownPosition().gte(IntakeConstants.UPPER_RELEASE_POS)) {
+                           runSlapdown(IntakeConstants.LIFT_VEL);
+                           coro.yield();
+                       }
+                       intakeSlapdown.setVoltage(0);
                    }
-                   intakeSlapdown.setVoltage(0);
-               }
         ).named("intake: lift");
     }
 
     public Command getSlapdownCommand() {
-        return run(coro -> {
-                   while (!getSlapdownPosition().gte(IntakeConstants.LOWER_RELEASE_POS)) {
-                       runSlapdown(IntakeConstants.SLAPDOWN_VEL);
-                       coro.yield();
+        return run(
+                   coro -> {
+                       while (!getSlapdownPosition().gte(IntakeConstants.LOWER_RELEASE_POS)) {
+                           runSlapdown(IntakeConstants.SLAPDOWN_VEL);
+                           coro.yield();
+                       }
+                       intakeSlapdown.setVoltage(0);
                    }
-                   intakeSlapdown.setVoltage(0);
-               }
         ).named("intake: slapdown");
     }
 
