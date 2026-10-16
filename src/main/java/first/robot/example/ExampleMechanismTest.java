@@ -1,12 +1,12 @@
-package first.robot.tests.functional;
+package first.robot.example;
 
-import first.robot.Robot;
-import first.robot.mechanisms.ExampleMechanism;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.opmode.PeriodicOpMode;
 import org.wpilib.opmode.Utility;
 
-@Utility
+import first.robot.Robot;
+
+@Utility(name = "Example Mechanism Test", group = "Testers")
 public class ExampleMechanismTest extends PeriodicOpMode {
     ExampleMechanism mechanism;
 
