@@ -9,9 +9,14 @@ import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
 import static org.wpilib.units.Units.Second;
 import static org.wpilib.units.Units.Volts;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
@@ -34,14 +39,9 @@ import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotorOutputConfigs;
-import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import first.robot.FieldConstants;
 import first.robot.IDs;
@@ -541,16 +541,13 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                                .withReverseSoftLimitThreshold(TurretConstants.REVERSE_LIMIT_TUR_REL)
                        );
 
-                       kraken.setVoltage(0.75);
-                       while (!limitTrigger.getAsBoolean())
-                           coro.yield();
-                       kraken.setVoltage(-0.75);
-                       while (limitTrigger.getAsBoolean())
-                           coro.yield();
-                       kraken.setVoltage(0.65);
-                       while (!limitTrigger.getAsBoolean())
-                           coro.yield();
-                       resetAngle(TurretConstants.HALL_LIMIT_POS_BOT_REL);
+                   kraken.setVoltage(0.75);
+                   while (!limitTrigger.getAsBoolean()) coro.yield();
+                   kraken.setVoltage(-0.75);
+                   while (limitTrigger.getAsBoolean()) coro.yield();
+                   kraken.setVoltage(0.65);
+                   while (!limitTrigger.getAsBoolean()) coro.yield();
+                   resetAngle(TurretConstants.HALL_LIMIT_POS_BOT_REL);
 
                        kraken.getConfigurator().apply(
                            new SoftwareLimitSwitchConfigs()

@@ -1,7 +1,7 @@
 package first.robot.spindex;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
+import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
@@ -12,8 +12,8 @@ import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.tunable.TunableDouble;
 
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import first.robot.IDs;
 import first.robot.Robot;
