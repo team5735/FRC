@@ -9,6 +9,8 @@ import static org.wpilib.units.Units.RPM;
 import static org.wpilib.units.Units.Second;
 import static org.wpilib.units.Units.Volts;
 
+import static first.robot.launcher.LauncherConstants.*;
+
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.controls.Follower;
@@ -34,6 +36,7 @@ import first.robot.IDs;
 import first.robot.Robot;
 import first.robot.intake.IntakeMechanism;
 import first.robot.spindex.SpinDexMechanism;
+import first.robot.util.NTEntry;
 import first.robot.util.NTable;
 import first.robot.util.SysIdRoutine;
 
@@ -42,14 +45,17 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
     private final TalonFX krakenRight = new TalonFX(IDs.LAUNCHER_RIGHT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
 
     private final BangBangController bangbang = new BangBangController();
-    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(LauncherConstants.KS, LauncherConstants.KV);
+    private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(KS, KV);
 
     private final NTable table = NTable.root("launcher");
+
+    private final NTEntry bangbangThreshold = table.entry("bangbang threshold").defaultTo(BANGBANG_THRESHOLD);
+    private final NTEntry bangbangMult = table.entry("bangbang multiplier").defaultTo(BANGBANG_MULT);
 
     private double setpoint = 0;
 
     public LauncherMechanism() {
-        this.table.set("shooter_volts", LauncherConstants.LAUNCHER_VOLTS);
+        this.table.set("shooter_volts", LAUNCHER_VOLTS);
         krakenLeft.getConfigurator().apply(new MotorOutputConfigs()
                                                .withInverted(InvertedValue.CounterClockwise_Positive)
                                                .withNeutralMode(NeutralModeValue.Coast));
@@ -57,27 +63,25 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
         krakenRight.setControl(new Follower(IDs.LAUNCHER_LEFT_KRAKEN_ID, MotorAlignmentValue.Opposed));
         krakenRight.getConfigurator().apply(new CurrentLimitsConfigs().withSupplyCurrentLimit(Amps.of(30)));
 
-        table.ensure("!! threshold", LauncherConstants.BANGBANG_THRESHOLD);
-        table.ensure("!! mult", 5);
         table.set("rpm", 3000.0);
     }
 
     public double getRPM() {
         this.table.set("motorRPS", krakenLeft.getVelocity().getValueAsDouble());
-        return krakenLeft.getVelocity().getValue().in(RPM) *LauncherConstants.GEARING;
+        return krakenLeft.getVelocity().getValue().in(RPM) *GEARING;
     }
 
     public double getTargetRPM() { return this.setpoint; }
 
     private void setTargetRPM(double rpm) {
         this.setpoint = rpm;
-        bangbang.setSetpoint(rpm * LauncherConstants.BANGBANG_THRESHOLD);
+        bangbang.setSetpoint(rpm * BANGBANG_THRESHOLD);
         bangbang.setTolerance(rpm * 0.01);
     }
 
     public void usePID() {
         double output = (bangbang.getSetpoint() != 0)
-                            ? bangbang.calculate(getRPM()) * table.getDouble("!! mult") + ff.calculate(setpoint)
+                            ? bangbang.calculate(getRPM()) * bangbangMult.getDouble() + ff.calculate(setpoint)
                             : 0;
         this.table.set("output", output);
         krakenLeft.setVoltage(output);
@@ -95,7 +99,7 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
     public void stop() { krakenLeft.setVoltage(0); }
 
     public void retunePID() {
-        bangbang.setSetpoint(setpoint * table.getDouble("!! threshold"));
+        bangbang.setSetpoint(setpoint * bangbangThreshold.getDouble());
         bangbang.setTolerance(setpoint * 0.01);
     }
 
@@ -112,7 +116,7 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
         ).named("launcher: with rpm=" + speed);
     }
 
-    private final TunableDouble rpmTunable = table.tunableDouble("rpm");
+    private final TunableDouble rpmTunable = table.entry("rpm").tunableDouble();
 
     public Command getLaunchFuelNT() {
         return run(coro -> {
