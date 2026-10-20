@@ -31,6 +31,7 @@ import java.util.Arrays;
 import first.robot.DrivetrainTelemetry;
 import first.robot.FieldConstants;
 import first.robot.drivetrain.DrivetrainMechanism;
+import first.robot.util.NTEntry;
 import first.robot.util.NTable;
 
 public class LimelightMechanism implements Mechanism {
@@ -69,6 +70,12 @@ public class LimelightMechanism implements Mechanism {
 
     private final NTable lltable;
 
+    private final NTEntry distFromGround;
+    private final NTEntry angularVelocity;
+    private final NTEntry singleTagAmbiguity;
+    private final NTEntry multiTagAmbiguity;
+    private final NTEntry stddevAngularVelocity;
+
     /** add this to return-values of {@link NetworkTableEntry#getLastChange()} */
     private static double epochDifference = Double.NaN;
 
@@ -79,20 +86,22 @@ public class LimelightMechanism implements Mechanism {
         this.drivetrain = drivetrain;
         this.table = NTable.root("vision").sub(limelightName);
 
-        NTable.root("vision").ensure("enabled", true);
+        NTable.root("vision").entry("enabled").ensure(true);
 
         NTable limits = this.table.sub("limits");
-        limits.set("distance from ground", Centimeters.of(25).in(Meters));
-        limits.set("angular velocity", DegreesPerSecond.of(10).in(RadiansPerSecond));
-        limits.set("single tag ambiguity", 0.2);
-        limits.set("multi tag ambiguity", 0.5);
-        limits.set("(stddevs) angular velocity", DegreesPerSecond.of(1).in(RadiansPerSecond));
+        this.distFromGround = limits.entry("distance from ground").defaultTo(Centimeters.of(25).in(Meters));
+        this.angularVelocity = limits.entry("angular velocity").defaultTo(DegreesPerSecond.of(10).in(RadiansPerSecond));
+        this.singleTagAmbiguity = limits.entry("single tag ambiguity").defaultTo(0.2);
+        this.multiTagAmbiguity = limits.entry("multi tag ambiguity").defaultTo(0.5);
+        this.stddevAngularVelocity =
+            limits.entry("stddev angular velocity").defaultTo(DegreesPerSecond.of(1).in(RadiansPerSecond));
 
         lltable = NTable.root(limelightName);
 
         double phoenixTime = Utils.getCurrentTimeSeconds();
-        this.table.set("dummy for epoch", 0);
-        double networkTablesTime = this.table.getEntry("dummy for epoch").getLastChange();
+        NTEntry dummy = this.table.entry("dummy for epoch");
+        dummy.set(0);
+        double networkTablesTime = dummy.getRawEntry().getLastChange();
         double thisEpochDifference = phoenixTime - networkTablesTime;
         if (!Double.isNaN(epochDifference)) System.out.println("old epochDifference=" + epochDifference);
         epochDifference = thisEpochDifference;
@@ -112,7 +121,7 @@ public class LimelightMechanism implements Mechanism {
         public PoseEstimate() {
             double[] stddevs = lltable.get("stddevs", new double[0]);
             double[] array = lltable.get("botpose_wpiblue", new double[0]);
-            double timestamp = lltable.getEntry("botpose_wpiblue").getLastChange();
+            double timestamp = lltable.entry("botpose_wpiblue").getRawEntry().getLastChange();
 
             if (array.length == 0 || stddevs.length == 0) {
                 return;
@@ -156,34 +165,28 @@ public class LimelightMechanism implements Mechanism {
         this.lltable.set("robot_orientation_set", new double[] {pose.getRotation().getDegrees(), 0, 0, 0, 0, 0});
     }
 
-    private boolean check(double measurement, String name) {
-        this.table.sub("measurements").set(name, measurement);
-        boolean ok = measurement <= this.table.sub("limits").get(name, 0.0);
-        this.table.sub("checks").set(name, ok);
+    private boolean check(double measurement, NTEntry limitEntry) {
+        this.table.sub("measurements").set(limitEntry.getName(), measurement);
+        boolean ok = measurement <= this.table.sub("limits").get(limitEntry.getName(), 0.0);
+        this.table.sub("checks").set(limitEntry.getName(), ok);
         return ok;
     }
 
     public Pose2d getPoseEstimate() { return new PoseEstimate().pose2d; }
 
     public void handleVisionMeasurement() {
-        if (!NTable.root("vision").get("enabled", true)) {
-            this.table.sub("checks").set("enabled in network tables", false);
-            return;
-        }
-        this.table.sub("checks").set("enabled in network tables", true);
+        if (!NTable.root("vision").get("enabled", true)) return;
 
         PoseEstimate estimate = new PoseEstimate();
-        if (estimate.pose2d == null) {
-            this.table.sub("checks").set("could retrieve pose estimate", false);
-            return;
-        }
-        this.table.sub("checks").set("could retrieve pose estimate", true);
+        NTEntry couldRetrieveCheck = this.table.entry("could retrieve pose estimate");
+        couldRetrieveCheck.set(estimate.pose2d != null);
+        if (estimate.pose2d == null) return;
 
         DrivetrainTelemetry.field.getObject(limelightName).setPose(estimate.pose2d);
 
         boolean accepted = true;
 
-        accepted = check(estimate.pose3d.getMeasureZ().in(Meters), "distance from ground") && accepted;
+        accepted = check(estimate.pose3d.getMeasureZ().in(Meters), distFromGround) && accepted;
 
         // pose estimate is off the field
         double conservativeRobotRadius =
@@ -207,13 +210,13 @@ public class LimelightMechanism implements Mechanism {
 
         double[] ambiguities = Arrays.stream(estimate.fiducials).mapToDouble(tag -> tag.ambiguity).toArray();
         if (ambiguities.length == 1) {
-            accepted = check(ambiguities[0], "single tag ambiguity") && accepted;
+            accepted = check(ambiguities[0], singleTagAmbiguity) && accepted;
         } else if (ambiguities.length > 1) {
-            accepted = check(Arrays.stream(ambiguities).max().getAsDouble(), "multi tag ambiguity") && accepted;
+            accepted = check(Arrays.stream(ambiguities).max().getAsDouble(), multiTagAmbiguity) && accepted;
         }
 
-        accepted = check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(), "angular velocity") &&
-                   accepted;
+        accepted =
+            check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(), angularVelocity) && accepted;
 
         if (!accepted) {
             return;
@@ -289,8 +292,7 @@ public class LimelightMechanism implements Mechanism {
         estimateTable.sub("penalties").set("total", totalPenalty);
 
         stddevs = stddevs.times(totalPenalty);
-        if (!check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(), "(stddevs) angular velocity"))
-        {
+        if (!check(drivetrain.getPigeon2().getAngularVelocityZWorld().getValueAsDouble(), stddevAngularVelocity)) {
             stddevs.getData()[2] = 99999;
         }
 

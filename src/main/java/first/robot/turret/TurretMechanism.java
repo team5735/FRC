@@ -9,14 +9,9 @@ import static org.wpilib.units.Units.RotationsPerSecondPerSecond;
 import static org.wpilib.units.Units.Second;
 import static org.wpilib.units.Units.Volts;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotorOutputConfigs;
-import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
@@ -39,14 +34,20 @@ import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
 import first.robot.drivetrain.RobotConstants;
+import first.robot.util.NTable;
 import first.robot.util.SysIdRoutine;
 
 public class TurretMechanism implements Mechanism, TelemetryLoggable {
@@ -61,7 +62,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private Supplier<Boolean> turretEnabled;
     private Consumer<Pose2d> setTurretPose;
 
-    private TelemetryTable table;
+    private NTable table;
 
     private final ProfiledPIDController pid = new ProfiledPIDController(
         TurretConstants.KP, TurretConstants.KI, TurretConstants.KD,
@@ -179,39 +180,39 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         Translation2d blue = FieldConstants.BLUE_HUB_CENTER;
         Translation2d red = FieldConstants.redElement(FieldConstants.BLUE_HUB_CENTER);
         Translation2d closer = blue.getDistance(turret) < red.getDistance(turret) ? blue : red;
-        this.table.log("closer hub", closer);
+        this.table.set("closer hub", closer);
 
         Translation2d turretToHub = closer.minus(turret);
-        this.table.log("turret to hub", turretToHub);
+        this.table.set("turret to hub", turretToHub);
 
         Angle shouldBeAngle = turretToHub.getAngle().orElse(Rotation2d.fromDegrees(-1)).getMeasure();
-        this.table.log("should be (deg)", shouldBeAngle.in(Degrees));
+        this.table.set("should be (deg)", shouldBeAngle.in(Degrees));
 
         Angle isAngle = this.getMechanismPose().getRotation().getMeasure();
-        this.table.log("is (deg)", isAngle.in(Degrees));
+        this.table.set("is (deg)", isAngle.in(Degrees));
 
         double delta = MathUtil.angleModulus(shouldBeAngle.in(Radians)) - MathUtil.angleModulus(isAngle.in(Radians));
-        this.table.log("aimed", Math.abs(delta) < Degrees.of(4).in(Radians));
+        this.table.set("aimed", Math.abs(delta) < Degrees.of(4).in(Radians));
     }
 
     void doPeriodicTelemetry() {
-        this.table.log("posRots", getAngle().in(Rotations));
-        this.table.log("velRPS", kraken.getVelocity().getValue().in(RotationsPerSecond));
-        this.table.log("setpointPosRots", turretRelToRobotRel(Rotations.of(pid.getSetpoint().position)).in(Rotations));
-        this.table.log("setpointVelRPS", pid.getSetpoint().velocity);
-        this.table.log("volts", kraken.getMotorVoltage().getValueAsDouble());
-        this.table.log("posErrorRots", pid.getPositionError());
-        this.table.log("limitEngaged", !hallLimit.get());
-        this.table.log("isZeroed", isZeroed);
-        this.table.log("atForwardSoftwareLimit", isAtForwardLim.getAsBoolean());
-        this.table.log("atReverseSoftwareLimit", isAtReverseLim.getAsBoolean());
-        this.table.log("isAtGoalPos", isAtGoalPos());
-        this.table.log(
+        this.table.set("posRots", getAngle().in(Rotations));
+        this.table.set("velRPS", kraken.getVelocity().getValue().in(RotationsPerSecond));
+        this.table.set("setpointPosRots", turretRelToRobotRel(Rotations.of(pid.getSetpoint().position)).in(Rotations));
+        this.table.set("setpointVelRPS", pid.getSetpoint().velocity);
+        this.table.set("volts", kraken.getMotorVoltage().getValueAsDouble());
+        this.table.set("posErrorRots", pid.getPositionError());
+        this.table.set("limitEngaged", !hallLimit.get());
+        this.table.set("isZeroed", isZeroed);
+        this.table.set("atForwardSoftwareLimit", isAtForwardLim.getAsBoolean());
+        this.table.set("atReverseSoftwareLimit", isAtReverseLim.getAsBoolean());
+        this.table.set("isAtGoalPos", isAtGoalPos());
+        this.table.set(
             "distance to hub", FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)
                                    .getDistance(this.getMechanismPose().getTranslation())
         );
-        this.table.log("canTurnTo", canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
-        this.table.log("statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
+        this.table.set("canTurnTo", canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
+        this.table.set("statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
 
         this.setTurretPose.accept(getMechanismPose());
 
@@ -220,7 +221,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     @Override
     public void logTo(TelemetryTable table) {
-        this.table = table;
+        this.table = NTable.fromTelemetryTable(table);
         doPeriodicTelemetry();
     }
 
@@ -313,14 +314,14 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        if (!turretEnabled.get()) return;
 
                        double pidOut = pid.calculate(getAngleTurretRel().in(Rotations), goalSupplier.get());
-                       this.table.log("pid_out", pidOut);
+                       this.table.set("pid_out", pidOut);
 
                        double newVel = pid.getSetpoint().velocity;
                        double ffOut = (!MathUtil.isNear(0, newVel, 0.075))
                                           ? ff.calculate(newVel, (newVel - prevVel) / 0.05)
                                       : (!isAtGoalPos()) ? Math.copySign(TurretConstants.KS, pidOut)
                                                          : 0;
-                       this.table.log("feedforward_out", ffOut);
+                       this.table.set("feedforward_out", ffOut);
 
                        double voltsToSet = (!isAtGoalPos()) ? pidOut + ffOut : 0;
                        kraken.setVoltage(voltsToSet);
@@ -354,7 +355,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                        if (!turretEnabled.get()) return;
 
                        double pidOut = pid.calculate(getAngleTurretRel().in(Rotations));
-                       this.table.log("pid_out", pidOut);
+                       this.table.set("pid_out", pidOut);
 
                        double newVel = pid.getSetpoint().velocity;
                        double ffOut = (!MathUtil.isNear(0, newVel, 0.075))
@@ -362,7 +363,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                                       : (MathUtil.isNear(0, pidOut, 0.75 * TurretConstants.KS))
                                           ? 0
                                           : Math.copySign(0.5 * TurretConstants.KS, pidOut);
-                       this.table.log("feedforward_out", ffOut);
+                       this.table.set("feedforward_out", ffOut);
 
                        double voltsToSet = pidOut + ffOut;
                        if (isAtGoalPos()) voltsToSet = 0;

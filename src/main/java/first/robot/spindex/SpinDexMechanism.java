@@ -1,7 +1,7 @@
 package first.robot.spindex;
 
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
@@ -12,8 +12,8 @@ import org.wpilib.telemetry.TelemetryLoggable;
 import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.tunable.TunableDouble;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
+import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import first.robot.IDs;
 import first.robot.Robot;
@@ -25,9 +25,9 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
         new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_WHEEL_VORTEX_ID, MotorType.kBrushless);
 
     private NTable table = NTable.root("tuning").sub("spindex");
-    private TunableDouble feedVoltage = table.tunableDouble("feed", -6);
-    private TunableDouble forwardVoltage = table.tunableDouble("wheel forward voltage", -4);
-    private TunableDouble reverseVoltage = table.tunableDouble("wheel reverse voltage", 5);
+    private TunableDouble feedVoltage = table.entry("feed").tunableDouble(-6);
+    private TunableDouble forwardVoltage = table.entry("wheel forward voltage").tunableDouble(-4);
+    private TunableDouble reverseVoltage = table.entry("wheel reverse voltage").tunableDouble(5);
 
     public SpinDexMechanism() {
         super();
