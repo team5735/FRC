@@ -326,8 +326,7 @@ public class DrivetrainMechanism
 
     public ChassisVelocities getChassisVelocities() {
         var states = new SwerveModuleVelocity[4];
-        for (int i = 0; i < 4; i++)
-            states[i] = getModule(i).getCurrentVelocity();
+        for (int i = 0; i < 4; i++) states[i] = getModule(i).getCurrentVelocity();
         return constants.config().toChassisSpeeds(states);
     }
 
