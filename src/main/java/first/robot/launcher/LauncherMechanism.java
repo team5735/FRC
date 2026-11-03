@@ -68,7 +68,7 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
 
     public double getRPM() {
         this.table.set("motorRPS", krakenLeft.getVelocity().getValueAsDouble());
-        return krakenLeft.getVelocity().getValue().in(RPM) * LauncherConstants.GEARING;
+        return krakenLeft.getVelocity().getValue().in(RPM) *LauncherConstants.GEARING;
     }
 
     public double getTargetRPM() { return this.setpoint; }
@@ -104,46 +104,43 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
     }
 
     public Command getLaunchFuel(AngularVelocity speed) {
-        return run(
-                   coro -> {
-                       retunePID();
-                       setTargetRPM(speed.in(RPM));
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(speed.in(RPM));
 
-                       while (true) {
-                           usePID();
-                           coro.yield();
-                       }
+                   while (true) {
+                       usePID();
+                       coro.yield();
                    }
+               }
         ).named("launcher: with rpm=" + speed);
     }
 
     private final TunableDouble rpmTunable = table.entry("rpm").tunableDouble();
 
     public Command getLaunchFuelNT() {
-        return run(
-                   coro -> {
-                       retunePID();
-                       setTargetRPM(this.rpmTunable.get());
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(this.rpmTunable.get());
 
-                       while (true) {
-                           usePID();
-                           coro.yield();
-                       }
+                   while (true) {
+                       usePID();
+                       coro.yield();
                    }
+               }
         ).named("launcher: with rpm=" + this.table.getPath() + "/rpm");
     }
 
     public Command getLaunchFuelSupplier(Supplier<AngularVelocity> rpmSupplier) {
-        return run(
-                   coro -> {
-                       retunePID();
-                       setTargetRPM(rpmSupplier.get().in(RPM));
+        return run(coro -> {
+                   retunePID();
+                   setTargetRPM(rpmSupplier.get().in(RPM));
 
-                       while (true) {
-                           usePID();
-                           coro.yield();
-                       }
+                   while (true) {
+                       usePID();
+                       coro.yield();
                    }
+               }
         ).named("launcher: with rpm from supplier");
     }
 
