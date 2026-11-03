@@ -1,5 +1,13 @@
 package first.robot.util;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTableEntry;
 import org.wpilib.networktables.NetworkTableInstance;
@@ -22,19 +30,11 @@ import org.wpilib.tunable.TunableRegistry;
 import org.wpilib.util.struct.Struct;
 import org.wpilib.util.struct.StructBuffer;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 public class NTEntry {
     private NetworkTableEntry wrappedEntry;
-    private TunableBase tunable;
     private NTable child;
     private NTable ntable;
+    private TunableBase tunable; // Tunable<T> where T matches this.type
     private NetworkTableType type;
 
     private static HashMap<Class<?>, Struct<?>> structCache = new HashMap<>();
@@ -70,6 +70,13 @@ public class NTEntry {
         this.name = name;
         this.type = type;
         this.wrappedEntry = entry;
+
+        if (type != NetworkTableType.UNASSIGNED) {
+            NetworkTableValue val = entry.getValue();
+            this.tunable = Tunable.createConfig(val.getValue(), TunableConfig.of(TunableOption.ALWAYS_GET));
+        } else {
+            this.tunable = null;
+        }
 
         if (this.ntable.entries.containsKey(name)) {
             throw new IllegalStateException("tried to create a duplicate NTable.entry");
@@ -675,8 +682,9 @@ public class NTEntry {
      */
     private <T extends TunableBase, U> T tunableOf(Class<T> classType, U initialValue, Class<U> valueType) {
         try {
-            Constructor<T> ctor = classType.getConstructor(valueType, TunableConfig.class);
-            T res = ctor.newInstance(initialValue, TunableConfig.of(TunableOption.ALWAYS_GET));
+            Method method = classType.getMethod("createConfig", valueType, TunableConfig.class);
+            @SuppressWarnings("unchecked")
+            T res = (T) method.invoke(null, initialValue, TunableConfig.of(TunableOption.ALWAYS_GET));
             TunableRegistry.publish(getPath(), res);
             return res;
         } catch (ReflectiveOperationException e) {
@@ -688,49 +696,34 @@ public class NTEntry {
         }
     }
 
-    /**
-     * {@return a {@link TunableInt} for the named entry with the given initial
-     * value}
-     */
+    /** {@return a {@link TunableInt} for this entry with the given initial value} */
     public TunableInt tunableInt(int init) { return tunableOf(TunableInt.class, init, int.class); }
 
-    /**
-     * {@return a {@link TunableLong} for the named entry with the given initial
-     * value}
-     */
+    /** {@return a {@link TunableLong} for this entry with the given initial value} */
     public TunableLong tunableLong(long init) { return tunableOf(TunableLong.class, init, long.class); }
 
-    /**
-     * {@return a {@link TunableFloat} for the named entry with the given initial
-     * value}
-     */
+    /** {@return a {@link TunableFloat} for this entry with the given initial value} */
     public TunableFloat tunableFloat(float init) { return tunableOf(TunableFloat.class, init, float.class); }
 
-    /**
-     * {@return a {@link TunableDouble} for the named entry with the given initial
-     * value}
-     */
+    /** {@return a {@link TunableDouble} for this entry with the given initial value} */
     public TunableDouble tunableDouble(double init) { return tunableOf(TunableDouble.class, init, double.class); }
 
-    /**
-     * {@return a {@link TunableBoolean} for the named entry with the given initial
-     * value}
-     */
+    /** {@return a {@link TunableBoolean} for this entry with the given initial value} */
     public TunableBoolean tunableBoolean(boolean init) { return tunableOf(TunableBoolean.class, init, boolean.class); }
 
-    /** {@return a {@link TunableInt} for the named entry} */
+    /** {@return a {@link TunableInt} for this entry} */
     public TunableInt tunableInt() { return tunableOf(TunableInt.class, 0, int.class); }
 
-    /** {@return a {@link TunableLong} for the named entry} */
+    /** {@return a {@link TunableLong} for this entry} */
     public TunableLong tunableLong() { return tunableOf(TunableLong.class, 0l, long.class); }
 
-    /** {@return a {@link TunableFloat} for the named entry} */
+    /** {@return a {@link TunableFloat} for this entry} */
     public TunableFloat tunableFloat() { return tunableOf(TunableFloat.class, 0f, float.class); }
 
-    /** {@return a {@link TunableDouble} for the named entry} */
+    /** {@return a {@link TunableDouble} for this entry} */
     public TunableDouble tunableDouble() { return tunableOf(TunableDouble.class, 0d, double.class); }
 
-    /** {@return a {@link TunableBoolean} for the named entry} */
+    /** {@return a {@link TunableBoolean} for this entry} */
     public TunableBoolean tunableBoolean() { return tunableOf(TunableBoolean.class, false, boolean.class); }
 
     /**
