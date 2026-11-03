@@ -1,13 +1,5 @@
 package first.robot.util;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.networktables.NetworkTableEntry;
 import org.wpilib.networktables.NetworkTableInstance;
@@ -30,11 +22,19 @@ import org.wpilib.tunable.TunableRegistry;
 import org.wpilib.util.struct.Struct;
 import org.wpilib.util.struct.StructBuffer;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 public class NTEntry {
     private NetworkTableEntry wrappedEntry;
     private NTable child;
     private NTable ntable;
-    private TunableBase tunable; // Tunable<T> where T matches this.type
+    private TunableBase tunable;  // Tunable<T> where T matches this.type
     private NetworkTableType type;
 
     private static HashMap<Class<?>, Struct<?>> structCache = new HashMap<>();
