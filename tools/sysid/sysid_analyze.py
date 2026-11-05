@@ -24,12 +24,17 @@ What it does, automatically, from the log file alone:
      are the steer motors (and vice-versa for a steer test). This is how
      "the drive wheels" are found -- no CAN-ID assumptions, no project
      source required.
-  4. Fits the standard SysId feedforward model
-         V = kS*sign(v) + kV*v + kA*a
-     by ordinary least squares over the quasistatic + dynamic test phases,
-     pooling data from all motors in the identified group, and reports
-     kS/kV/kA plus R^2, matching what the WPILib SysId "Simple/Drivetrain"
-     feedforward analysis produces.
+  4. Fits the standard SysId feedforward model V = kS*sign(v) + kV*v + kA*a
+     in two stages, pooling data from all motors in the identified group:
+       - kS, kV: 2-parameter fit (V = kS*sign(v) + kV*v) over the
+         quasistatic phases only, where acceleration is assumed negligible.
+       - kA: the quasistatic kS/kV prediction is subtracted from voltage,
+         and the residual is regressed against acceleration over the
+         dynamic phases only.
+     Velocity is resampled onto a uniform time grid (one matching each
+     phase's own median sample interval) before differentiating to get
+     acceleration, since raw CAN bus timestamps aren't perfectly evenly
+     spaced.
 
 Optionally (best-effort, not required): if a CTRE Tuner X "TunerConstants"
 Java file can be found (via --project-dir, default: current directory),
@@ -260,21 +265,32 @@ def get_talonfx_signal(log: dict[str, LogSignal], can_id: int, signal: str) -> L
     return log.get(f"Phoenix6/TalonFX-{can_id}/{signal}")
 
 
-def cluster_motor_groups(log: dict[str, LogSignal], ids: list[int]) -> tuple[list[int], list[int]]:
-    """Split TalonFX ids into (high-variance, low-variance) groups by velocity std.
+def cluster_motor_groups(log: dict[str, LogSignal], ids: list[int],
+                          segments: list[Segment]) -> tuple[list[int], list[int]]:
+    """Split TalonFX ids into (high-variance, low-variance) groups by commanded-voltage
+    std during the test phases (segments) -- not the whole log, and not velocity.
 
-    For a swerve drivetrain this cleanly separates the 4 motors that are
-    actually being driven during the test from the 4 that are being held
-    still, with no CAN-ID assumptions.
+    The motors the SysIdRoutine is actually driving are the ones it's commanding a
+    swinging voltage to; the other group sits at ~0 V the whole time. This is more
+    reliable than clustering on velocity: a motor that's being passively backdriven
+    (e.g. a drive wheel scrubbing on carpet as its module's steer axis turns) can show
+    more velocity variance than the motor that's actually under active control, which
+    would make a velocity-based split pick the wrong group.
     """
     stds = {}
     for can_id in ids:
-        sig = get_talonfx_signal(log, can_id, "Velocity")
+        sig = get_talonfx_signal(log, can_id, "MotorVoltage")
         if sig is None or len(sig.v) == 0:
             stds[can_id] = 0.0
             continue
-        velocity_std = np.std(sig.v)
-        stds[can_id] = float(velocity_std)
+        if segments:
+            mask = np.zeros(len(sig.t), dtype=bool)
+            for seg in segments:
+                mask |= (sig.t >= seg.t_start) & (sig.t <= seg.t_end)
+            vals = sig.v[mask]
+        else:
+            vals = sig.v
+        stds[can_id] = float(np.std(vals)) if len(vals) else 0.0
 
     ordered = sorted(ids, key=lambda i: stds[i])
     if len(ordered) < 2:
@@ -382,28 +398,50 @@ def build_segments(state_sig: LogSignal) -> list[Segment]:
     return [s for s in segments if s.phase != "none" and s.t_end > s.t_start]
 
 
+_EMPTY_ROWS = (np.array([]), np.array([]), np.array([]), np.array([]))
+
+
+def _concat_rows(rows: dict[str, list]):
+    """Concatenates a {"sign": [...], "v": [...], "a": [...], "volt": [...]} row bucket."""
+    if not rows["v"]:
+        return _EMPTY_ROWS
+    return (np.concatenate(rows["sign"]), np.concatenate(rows["v"]),
+            np.concatenate(rows["a"]), np.concatenate(rows["volt"]))
+
+
 def extract_motor_rows(log: dict[str, LogSignal], can_id: int, segments: list[Segment],
                         trim_s: float, quasi_vel_threshold: float):
-    """Builds this motor's fit rows (sign(v), v, a, voltage) over the given test segments.
+    """Builds this motor's fit rows (sign(v), v, a, voltage), split by phase type.
+
+    Within each segment (after trim_s), velocity is resampled onto a uniform time grid --
+    spaced at that segment's own median sample interval, so this neither up- nor down-samples
+    the data, just regularizes jitter in the raw CAN bus timestamps -- before taking the
+    gradient for acceleration. A non-uniform finite difference (the previous approach) biases
+    the acceleration estimate when neighboring samples aren't evenly spaced; this also means a
+    fixed sample-count smoothing window, if one were added later, would correspond to a
+    consistent span of time, unlike a window over the raw samples.
 
     Args:
         trim_s: Seconds dropped from the start of each segment, to skip state-transition transients.
-        quasi_vel_threshold: Rotor rot/s; quasistatic samples below this |velocity| are dropped so
-            pre-breakaway static-friction noise doesn't bias kV.
+        quasi_vel_threshold: Rotor rot/s; quasistatic samples (after resampling) below this
+            |velocity| are dropped so pre-breakaway static-friction noise doesn't bias kV.
 
     Returns:
-        sign_v, v, a, volt: One row per kept sample; empty arrays if can_id has no usable data.
+        (quasi, dynamic): Each a (sign_v, v, a, volt) tuple of one row per kept sample, pooled
+            across that motor's quasistatic-* or dynamic-* segments respectively; empty arrays
+            in either slot if can_id has no usable data of that phase type.
     """
     vel_sig = get_talonfx_signal(log, can_id, "Velocity")
     volt_sig = get_talonfx_signal(log, can_id, "MotorVoltage")
     if vel_sig is None or volt_sig is None or len(vel_sig.t) < 3:
-        return np.array([]), np.array([]), np.array([]), np.array([])
+        return _EMPTY_ROWS, _EMPTY_ROWS
 
     t = vel_sig.t
     v = vel_sig.v
-    volt = np.interp(t, volt_sig.t, volt_sig.v)
 
-    sign_rows, v_rows, a_rows, volt_rows = [], [], [], []
+    quasi_rows = {"sign": [], "v": [], "a": [], "volt": []}
+    dyn_rows = {"sign": [], "v": [], "a": [], "volt": []}
+
     for seg in segments:
         lo = np.searchsorted(t, seg.t_start + trim_s, side="left")
         hi = np.searchsorted(t, seg.t_end, side="right")
@@ -411,53 +449,84 @@ def extract_motor_rows(log: dict[str, LogSignal], can_id: int, segments: list[Se
             continue
         t_seg = t[lo:hi]
         v_seg = v[lo:hi]
-        volt_seg = volt[lo:hi]
-        a_seg = np.gradient(v_seg, t_seg)
 
-        mask = np.ones_like(v_seg, dtype=bool)
+        duration = t_seg[-1] - t_seg[0]
+        if duration <= 0:
+            continue
+        dt = np.median(np.diff(t_seg))
+        if dt <= 0:
+            dt = duration / (len(t_seg) - 1)
+        n = max(3, int(round(duration / dt)) + 1)
+        t_uniform = np.linspace(t_seg[0], t_seg[-1], n)
+        dt_actual = t_uniform[1] - t_uniform[0]
+
+        v_uniform = np.interp(t_uniform, t_seg, v_seg)
+        volt_uniform = np.interp(t_uniform, volt_sig.t, volt_sig.v)
+        a_uniform = np.gradient(v_uniform, dt_actual)
+
+        mask = np.ones_like(v_uniform, dtype=bool)
+        bucket = dyn_rows
         if seg.phase.startswith("quasistatic"):
-            mask &= np.abs(v_seg) >= quasi_vel_threshold
+            mask &= np.abs(v_uniform) >= quasi_vel_threshold
+            bucket = quasi_rows
 
-        sign_rows.append(np.sign(v_seg[mask]))
-        v_rows.append(v_seg[mask])
-        a_rows.append(a_seg[mask])
-        volt_rows.append(volt_seg[mask])
+        bucket["sign"].append(np.sign(v_uniform[mask]))
+        bucket["v"].append(v_uniform[mask])
+        bucket["a"].append(a_uniform[mask])
+        bucket["volt"].append(volt_uniform[mask])
 
-    if not v_rows:
-        return np.array([]), np.array([]), np.array([]), np.array([])
-    return (np.concatenate(sign_rows), np.concatenate(v_rows),
-            np.concatenate(a_rows), np.concatenate(volt_rows))
+    return _concat_rows(quasi_rows), _concat_rows(dyn_rows)
 
 
-def fit_feedforward(sign_v: np.ndarray, v: np.ndarray, a: np.ndarray, volt: np.ndarray):
-    """Fits V = kS*sign_v + kV*v + kA*a by ordinary least squares.
+def _r_squared(actual: np.ndarray, pred: np.ndarray) -> float:
+    """Coefficient of determination; NaN if actual is constant."""
+    ss_res = float(np.sum((actual - pred) ** 2))
+    ss_tot = float(np.sum((actual - np.mean(actual)) ** 2))
+    return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+
+
+def fit_ks_kv(sign_v: np.ndarray, v: np.ndarray, volt: np.ndarray):
+    """Fits V = kS*sign_v + kV*v by ordinary least squares, over quasistatic data.
+
+    Acceleration is left out of this stage: quasistatic velocity is ramped slowly enough
+    that acceleration is assumed negligible, so including it here would mean fitting kA to
+    mostly noise.
 
     Args:
         sign_v: Sign of velocity, one row per sample.
         v: Velocity, rotor rot/s, one row per sample.
-        a: Acceleration, rotor rot/s^2, one row per sample.
         volt: Motor voltage, V, one row per sample; the regression target.
 
     Returns:
-        ks, kv, ka: Fitted feedforward gains.
+        ks, kv: Fitted feedforward gains.
         r2: Coefficient of determination of the fit; NaN if volt is constant.
         n: Number of samples fit over.
     """
-    A = np.column_stack([sign_v, v, a])
-    coeffs, residuals, rank, sv = np.linalg.lstsq(A, volt, rcond=None)
-    ks, kv, ka = coeffs
-    pred = A @ coeffs
+    A = np.column_stack([sign_v, v])
+    coeffs, _, _, _ = np.linalg.lstsq(A, volt, rcond=None)
+    ks, kv = coeffs
+    r2 = _r_squared(volt, A @ coeffs)
+    return ks, kv, r2, len(volt)
 
-    sq_residual_sum = np.sum((volt - pred) ** 2)
-    ss_res = float(sq_residual_sum)
-    volt_mean = np.mean(volt)
-    sq_deviation_sum = np.sum((volt - volt_mean) ** 2)
-    ss_tot = float(sq_deviation_sum)
 
-    r2 = float("nan")
-    if ss_tot > 0:
-        r2 = 1.0 - ss_res / ss_tot
-    return ks, kv, ka, r2, len(volt)
+def fit_ka(a: np.ndarray, residual_volt: np.ndarray):
+    """Fits residual_volt = kA*a by ordinary least squares (forced through the origin), over
+    dynamic data, with kS/kV already subtracted out of residual_volt by the caller.
+
+    Args:
+        a: Acceleration, rotor rot/s^2, one row per sample.
+        residual_volt: Motor voltage minus the quasistatic kS*sign(v) + kV*v prediction, one
+            row per sample; the regression target.
+
+    Returns:
+        ka: Fitted feedforward gain.
+        r2: Coefficient of determination of the fit; NaN if residual_volt is constant.
+        n: Number of samples fit over.
+    """
+    denom = float(np.dot(a, a))
+    ka = float(np.dot(a, residual_volt) / denom) if denom > 0 else float("nan")
+    r2 = _r_squared(residual_volt, ka * a)
+    return ka, r2, len(residual_volt)
 
 
 # --------------------------------------------------------------------------
@@ -519,6 +588,8 @@ def main():
     print(f"Detected mechanism: {label}")
     print(f"  (from custom signal '{state_name}')")
 
+    segments = build_segments(state_sig)
+
     talon_ids = discover_talonfx_ids(log)
     if not talon_ids:
         print("No TalonFX devices found in the log.", file=sys.stderr)
@@ -529,9 +600,9 @@ def main():
         other_ids: list[int] = []
         print(f"TalonFX devices on bus: {talon_ids} (using all of them)")
     else:
-        # the motors actually driven during the test are always the high-variance group,
-        # regardless of whether this was a drive or a steer test
-        motor_ids, other_ids = cluster_motor_groups(log, talon_ids)
+        # the motors actually driven during the test are always the ones with
+        # swinging commanded voltage, regardless of whether this was a drive or steer test
+        motor_ids, other_ids = cluster_motor_groups(log, talon_ids, segments)
 
         active_name = "steer motors"
         quiescent_name = "drive wheels"
@@ -543,39 +614,49 @@ def main():
         print(f"  Active during test (CAN IDs): {motor_ids}  <- these are the {active_name}")
         print(f"  Quiescent during test (CAN IDs): {other_ids}  <- {quiescent_name}")
 
-    segments = build_segments(state_sig)
     phase_counts = {}
     for seg in segments:
         phase_counts[seg.phase] = phase_counts.get(seg.phase, 0) + 1
     print(f"Test phases found: {phase_counts}")
 
-    all_sign, all_v, all_a, all_volt = [], [], [], []
+    quasi_sign_l, quasi_v_l, quasi_a_l, quasi_volt_l = [], [], [], []
+    dyn_sign_l, dyn_v_l, dyn_a_l, dyn_volt_l = [], [], [], []
     for can_id in motor_ids:
-        s, v, a, volt = extract_motor_rows(log, can_id, segments, args.trim_s,
-                                            args.quasi_vel_threshold)
-        if len(v) == 0:
+        (qs, qv, qa, qvolt), (ds, dv, da, dvolt) = extract_motor_rows(
+            log, can_id, segments, args.trim_s, args.quasi_vel_threshold)
+        if len(qv) == 0 and len(dv) == 0:
             print(f"  warning: no usable samples for TalonFX-{can_id}", file=sys.stderr)
             continue
-        all_sign.append(s)
-        all_v.append(v)
-        all_a.append(a)
-        all_volt.append(volt)
+        quasi_sign_l.append(qs); quasi_v_l.append(qv); quasi_a_l.append(qa); quasi_volt_l.append(qvolt)
+        dyn_sign_l.append(ds); dyn_v_l.append(dv); dyn_a_l.append(da); dyn_volt_l.append(dvolt)
 
-    if not all_v:
-        print("No usable data extracted; cannot fit.", file=sys.stderr)
+    quasi_sign = np.concatenate(quasi_sign_l) if quasi_sign_l else np.array([])
+    quasi_v = np.concatenate(quasi_v_l) if quasi_v_l else np.array([])
+    quasi_volt = np.concatenate(quasi_volt_l) if quasi_volt_l else np.array([])
+    dyn_sign = np.concatenate(dyn_sign_l) if dyn_sign_l else np.array([])
+    dyn_v = np.concatenate(dyn_v_l) if dyn_v_l else np.array([])
+    dyn_a = np.concatenate(dyn_a_l) if dyn_a_l else np.array([])
+    dyn_volt = np.concatenate(dyn_volt_l) if dyn_volt_l else np.array([])
+
+    if len(quasi_v) == 0:
+        print("No usable quasistatic-phase data extracted; cannot fit kS/kV.", file=sys.stderr)
+        sys.exit(1)
+    if len(dyn_v) == 0:
+        print("No usable dynamic-phase data extracted; cannot fit kA.", file=sys.stderr)
         sys.exit(1)
 
-    sign_v = np.concatenate(all_sign)
-    v = np.concatenate(all_v)
-    a = np.concatenate(all_a)
-    volt = np.concatenate(all_volt)
-
-    ks, kv, ka, r2, n = fit_feedforward(sign_v, v, a, volt)
+    ks, kv, r2_quasi, n_quasi = fit_ks_kv(quasi_sign, quasi_v, quasi_volt)
+    dyn_residual = dyn_volt - ks * dyn_sign - kv * dyn_v
+    ka, r2_dyn, n_dyn = fit_ka(dyn_a, dyn_residual)
 
     print()
-    print(f"Fit over {n} samples pooled from {len(motor_ids)} motor(s), R^2 = {r2:.4f}")
+    print(f"Stage A, quasistatic phases ({n_quasi} samples, {len(motor_ids)} motor(s)): "
+          f"kS/kV fit, R^2 = {r2_quasi:.4f}")
     print(f"  kS = {ks:.4f} V")
     print(f"  kV = {kv:.5f} V/(rotor rot/s)")
+    print()
+    print(f"Stage B, dynamic phases ({n_dyn} samples, {len(motor_ids)} motor(s)): "
+          f"kA fit (kS/kV held fixed from Stage A), R^2 = {r2_dyn:.4f}")
     print(f"  kA = {ka:.5f} V/(rotor rot/s^2)")
 
     gear_ratio = args.gear_ratio
@@ -609,34 +690,35 @@ def main():
               "or run with --project-dir pointing at a Tuner X project, for physical units.)")
 
     if args.plot:
+        plot_args = (quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label)
         if args.plot.lower() == "imshow":
-            show_plot(sign_v, v, a, volt, ks, kv, ka, label)
+            show_plot(*plot_args)
         else:
-            make_plot(args.plot, sign_v, v, a, volt, ks, kv, ka, label)
+            make_plot(args.plot, *plot_args)
             print(f"\nSaved diagnostic plot to {args.plot}")
 
 
-def _build_plot_figure(sign_v, v, a, volt, ks, kv, ka, label):
-    """Builds the two-panel voltage-vs-velocity / residual-vs-acceleration diagnostic figure."""
+def _build_plot_figure(quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label):
+    """Builds the two-panel diagnostic figure: Stage A's quasistatic voltage-vs-velocity fit,
+    and Stage B's dynamic residual-voltage-vs-acceleration fit."""
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
 
-    axes[0].scatter(v, volt, s=4, alpha=0.4, label="data")
-    vs = np.linspace(v.min(), v.max(), 200)
+    axes[0].scatter(quasi_v, quasi_volt, s=4, alpha=0.4, label="quasistatic data")
+    vs = np.linspace(quasi_v.min(), quasi_v.max(), 200)
     axes[0].plot(vs, ks * np.sign(vs) + kv * vs, color="orange", label="kS*sign(v) + kV*v")
     axes[0].set_xlabel("velocity (rotor rot/s)")
     axes[0].set_ylabel("voltage (V)")
-    axes[0].set_title("Voltage vs. velocity")
+    axes[0].set_title("Stage A: voltage vs. velocity (quasistatic)")
     axes[0].legend()
 
-    residual_v = volt - ks * sign_v - kv * v
-    axes[1].scatter(a, residual_v, s=4, alpha=0.4, label="data")
-    as_ = np.linspace(a.min(), a.max(), 200)
+    axes[1].scatter(dyn_a, dyn_residual, s=4, alpha=0.4, label="dynamic data")
+    as_ = np.linspace(dyn_a.min(), dyn_a.max(), 200)
     axes[1].plot(as_, ka * as_, color="orange", label="kA*a")
     axes[1].set_xlabel("acceleration (rotor rot/s^2)")
     axes[1].set_ylabel("voltage - kS*sign(v) - kV*v (V)")
-    axes[1].set_title("Residual voltage vs. acceleration")
+    axes[1].set_title("Stage B: residual voltage vs. acceleration (dynamic)")
     axes[1].legend()
 
     fig.suptitle(label)
@@ -644,18 +726,18 @@ def _build_plot_figure(sign_v, v, a, volt, ks, kv, ka, label):
     return fig
 
 
-def make_plot(path, sign_v, v, a, volt, ks, kv, ka, label):
+def make_plot(path, quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label):
     """Saves the diagnostic figure to path."""
     import matplotlib
     matplotlib.use("Agg")
-    fig = _build_plot_figure(sign_v, v, a, volt, ks, kv, ka, label)
+    fig = _build_plot_figure(quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label)
     fig.savefig(path, dpi=150)
 
 
-def show_plot(sign_v, v, a, volt, ks, kv, ka, label):
+def show_plot(quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label):
     """Pops up the diagnostic figure in an interactive matplotlib window."""
     import matplotlib.pyplot as plt
-    _build_plot_figure(sign_v, v, a, volt, ks, kv, ka, label)
+    _build_plot_figure(quasi_v, quasi_volt, dyn_a, dyn_residual, ks, kv, ka, label)
     plt.show()
 
 

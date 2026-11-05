@@ -20,9 +20,16 @@ already have open in AdvantageScope) — no Pro license, no Tuner X GUI needed.
   Translation or Rotation test the active group is the drive motors; for a
   Steer test it's the steer motors. No CAN-ID numbering is assumed.
 
-It then fits `V = kS*sign(v) + kV*v + kA*a` by least squares over the
-quasistatic + dynamic phases, pooling samples from every motor in the
-active group, and reports kS/kV/kA and R².
+It then fits `V = kS*sign(v) + kV*v + kA*a` in two stages, pooling samples
+from every motor in the active group:
+
+- **kS, kV** come from a 2-parameter fit (`V = kS*sign(v) + kV*v`) over the
+  quasistatic phases only, where acceleration is assumed negligible.
+- **kA** comes from subtracting that quasistatic kS/kV prediction from
+  voltage, and regressing the residual against acceleration over the
+  dynamic phases only.
+
+It reports kS/kV/kA and each stage's own R².
 
 If it can find a Tuner X `TunerConstants.java` (default: searched under
 `--project-dir`, which defaults to the current directory), it also converts
@@ -53,22 +60,24 @@ gear ratio and wheel radius from that file.
 
 ## Setup
 
+This tool shares a single venv across all `~/projects/frc` projects, at
+`~/projects/frc/.venv`. Create it once:
+
 ```bash
-cd tools/sysid
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+python3 -m venv ~/projects/frc/.venv
+~/projects/frc/.venv/bin/pip install -r requirements.txt
 ```
 
 ## Usage
 
 ```bash
 # from the repo root
-tools/sysid/.venv/bin/python3 tools/sysid/sysid_analyze.py \
+~/projects/frc/.venv/bin/python3 tools/sysid/sysid_analyze.py \
   /path/to/log.hoot --plot out.png
 
 # a .wpilog (e.g. exported from, or already open in, AdvantageScope) skips
 # the owlet conversion step entirely
-tools/sysid/.venv/bin/python3 tools/sysid/sysid_analyze.py \
+~/projects/frc/.venv/bin/python3 tools/sysid/sysid_analyze.py \
   /path/to/log.wpilog --plot out.png
 ```
 
@@ -85,7 +94,10 @@ trim/threshold tuning, keeping the intermediate `.wpilog`, etc).
   robot's odometry.
 - Acceleration is the numerical gradient of velocity within each
   contiguous test phase (gaps between phases, where the mechanism isn't
-  being driven, are excluded).
+  being driven, are excluded), after resampling velocity onto a uniform
+  time grid spaced at that phase's own median sample interval. Raw CAN
+  bus timestamps aren't perfectly evenly spaced, and a finite difference
+  over uneven spacing biases the acceleration estimate.
 - The first `--trim-s` seconds of each phase are dropped to avoid state-
   transition transients; quasistatic samples below `--quasi-vel-threshold`
   rotor rot/s are dropped so pre-breakaway static-friction noise doesn't
