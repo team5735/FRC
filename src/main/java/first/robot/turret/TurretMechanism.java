@@ -568,7 +568,7 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
                                  .minus(robotPoseSupplier.get().getRotation().getMeasure()));
     }
 
-    @Utility
+    @Utility(name = "Turret Tester", group = "Testers")
     public static class Tester implements OpMode {
         private Robot robot;
 

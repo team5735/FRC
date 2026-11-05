@@ -71,7 +71,7 @@ public class ClimberMechanism implements Mechanism, TelemetryLoggable {
         table.log("reverse_limit", talon.getReverseLimit().getValueAsDouble());
     }
 
-    @Utility
+    @Utility(name = "Climber Tester", group = "Testers")
     public static class Tester implements OpMode {
         private Robot robot;
 
