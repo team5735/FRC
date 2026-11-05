@@ -16,16 +16,14 @@ files=$(find . -name '*.java' -type f)
 
 modified="$(git status --porcelain=v1 --untracked-files=no | grep '^ M ' | cut --bytes 4-)"
 [[ -z "$modified" ]] && echo nothing formatted && exit 0
-[[ "$1" == "--check" ]] && exit 1
+[[ "$1" == "--check" ]] && echo unformatted files: $'\n'"$modified" exit 1
 count=$(<<<"$modified" wc -l)
 
 if [[ "$1" = "--no-ask" ]]; then
     should_commit="y"
 else
-    set +x
     read -N 1 -p "commit auto-formatting of $count file(s) (Y/n/c)? " should_commit
     [[ "$should_commit" != $'\n' ]] && echo
-    set -x
 fi
 
 case "$should_commit" in
@@ -34,11 +32,10 @@ case "$should_commit" in
         git commit --message="(format.java.sh) clang-format $count file(s)"
         ;;
     c|C)
-        echo cancelling push
-        git restore "$modified"
+        echo restoring
+        <<<"$modified" xargs git restore
         ;;
     *)
-        echo not committing
-        git restore "$modified"
+        echo $count files left formatted
         ;;
 esac
