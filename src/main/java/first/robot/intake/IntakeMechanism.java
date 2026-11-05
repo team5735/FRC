@@ -127,22 +127,22 @@ public class IntakeMechanism implements Mechanism, TelemetryLoggable {
 
     public Trigger limitEngaged = new Trigger(() -> !hallLimit.get());
 
-    @Utility
+    @Utility(name = "Intake Tester", group = "Testers")
     public static class Tester implements OpMode {
-        private final IntakeMechanism intake = new IntakeMechanism();
-
         public Tester(Robot robot) {
-            intake.limitEngaged.onTrue(
-                intake.run(_ -> intake.intakeSlapdown.setPosition(IntakeConstants.LIMIT_POS)).named("zero slapdown")
+            robot.intake.limitEngaged.onTrue(
+                robot.intake.run(_ -> robot.intake.intakeSlapdown.setPosition(IntakeConstants.LIMIT_POS))
+                    .named("zero slapdown")
             );
 
-            robot.port0.rightBumper().whileTrue(intake.getLiftCommand());
-            robot.port0.leftBumper().whileTrue(intake.getSlapdownCommand());
+            robot.port0.rightBumper().whileTrue(robot.intake.getLiftCommand());
+            robot.port0.leftBumper().whileTrue(robot.intake.getSlapdownCommand());
 
-            robot.port0.a().whileTrue(intake.sysIdDynamic(SysIdRoutine.Direction.FORWARD));  // forward = up
-            robot.port0.b().whileTrue(intake.sysIdDynamic(SysIdRoutine.Direction.REVERSE));
-            robot.port0.x().whileTrue(intake.sysIdQuasistatic(SysIdRoutine.Direction.FORWARD));
-            robot.port0.y().whileTrue(intake.sysIdQuasistatic(SysIdRoutine.Direction.REVERSE));
+            // forward is up
+            robot.port0.a().whileTrue(robot.intake.sysIdDynamic(SysIdRoutine.Direction.FORWARD));
+            robot.port0.b().whileTrue(robot.intake.sysIdDynamic(SysIdRoutine.Direction.REVERSE));
+            robot.port0.x().whileTrue(robot.intake.sysIdQuasistatic(SysIdRoutine.Direction.FORWARD));
+            robot.port0.y().whileTrue(robot.intake.sysIdQuasistatic(SysIdRoutine.Direction.REVERSE));
         }
     }
 }

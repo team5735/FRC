@@ -109,8 +109,6 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
 
     @Utility(name = "Spindex Tester", group = "Testers")
     public static class Tester implements OpMode {
-        private final SpinDexMechanism spindex = new SpinDexMechanism();
-
-        public Tester(Robot robot) { robot.port0.a().whileTrue(spindex.getRun()); }
+        public Tester(Robot robot) { robot.port0.a().whileTrue(robot.spindex.getRun()); }
     }
 }

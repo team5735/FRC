@@ -21,6 +21,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.math.controller.BangBangController;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
 import org.wpilib.opmode.OpMode;
@@ -40,6 +41,7 @@ import first.robot.util.NTEntry;
 import first.robot.util.NTable;
 import first.robot.util.SysIdRoutine;
 
+@Logged
 public class LauncherMechanism implements Mechanism, TelemetryLoggable {
     private final TalonFX krakenLeft = new TalonFX(IDs.LAUNCHER_LEFT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
     private final TalonFX krakenRight = new TalonFX(IDs.LAUNCHER_RIGHT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
@@ -182,22 +184,18 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
 
     public boolean atSetpoint() { return getRPM() > bangbang.getSetpoint(); }
 
-    @Utility
+    @Utility(name = "Launcher Tester", group = "Testers")
     public static class Tester implements OpMode {
-        private final SpinDexMechanism spindex = new SpinDexMechanism();
-        private final LauncherMechanism launcher = new LauncherMechanism();
-        private final IntakeMechanism intake = new IntakeMechanism();
-
         public Tester(Robot robot) {
-            launcher.setDefaultCommand(launcher.getLaunchFuel(RPM.of(0)));
+            robot.launcher.setDefaultCommand(robot.launcher.getLaunchFuel(RPM.of(0)));
 
-            robot.port0.a().whileTrue(launcher.getFedLaunch(spindex, RPM.of(3125)));
+            robot.port0.a().whileTrue(robot.launcher.getFedLaunch(robot.spindex, RPM.of(3125)));
             robot.port0.x()
-                .onTrue(spindex.run(_ -> spindex.reverse()).named("spindex: reverse"))
-                .onFalse(spindex.run(_ -> spindex.stop()).named("spindex: stop"));
+                .onTrue(robot.spindex.run(_ -> robot.spindex.reverse()).named("spindex: reverse"))
+                .onFalse(robot.spindex.run(_ -> robot.spindex.stop()).named("spindex: stop"));
             robot.port0.rightBumper()
-                .onTrue(intake.run(_ -> intake.forwardRoll()).named("intake: roll"))
-                .onFalse(intake.run(_ -> intake.stopRoll()).named("intake: stop"));
+                .onTrue(robot.intake.run(_ -> robot.intake.forwardRoll()).named("intake: roll"))
+                .onFalse(robot.intake.run(_ -> robot.intake.stopRoll()).named("intake: stop"));
         }
     }
 }

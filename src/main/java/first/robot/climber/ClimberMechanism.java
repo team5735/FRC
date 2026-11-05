@@ -73,20 +73,21 @@ public class ClimberMechanism implements Mechanism, TelemetryLoggable {
 
     @Utility
     public static class Tester implements OpMode {
-        ClimberMechanism climber = new ClimberMechanism();
+        private Robot robot;
 
         public Tester(Robot robot) {
+            this.robot = robot;
             robot.port0.rightTrigger()
-                .whileTrue(climber.run(_ -> climber.extend()).named("extend"))
-                .onFalse(climber.run(_ -> climber.stop()).named("stop"));
+                .whileTrue(robot.climber.run(_ -> robot.climber.extend()).named("extend"))
+                .onFalse(robot.climber.run(_ -> robot.climber.stop()).named("stop"));
             robot.port0.leftTrigger()
-                .whileTrue(climber.run(_ -> climber.retract()).named("retract"))
-                .onFalse(climber.run(_ -> climber.stop()).named("stop"));
+                .whileTrue(robot.climber.run(_ -> robot.climber.retract()).named("retract"))
+                .onFalse(robot.climber.run(_ -> robot.climber.stop()).named("stop"));
         }
 
         @Override
         public void periodic() {
-            climber.checkLimitSwitches();
+            robot.climber.checkLimitSwitches();
         }
     };
 }

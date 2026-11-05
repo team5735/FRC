@@ -129,29 +129,27 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
 
     @Utility(name = "Hood Tester", group = "Testers")
     public static class Tester implements OpMode {
-        private final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(), FieldConstants.HOOD_EXCLUSION_ZONES);
-
         private double lastPos = 0.6;
 
         public Tester(Robot robot) {
-            robot.port0.y().onTrue(hood.run(_ -> hood.setHoodPosition(1.0)).named("set hood position to 1.0"));
-            robot.port0.b().onTrue(hood.run(_ -> hood.setHoodPosition(0.0)).named("set hood position to 0.0"));
+            robot.port0.y().onTrue(robot.hood.run(_ -> robot.hood.setHoodPosition(1.0)).named("hood to 1.0"));
+            robot.port0.b().onTrue(robot.hood.run(_ -> robot.hood.setHoodPosition(0.0)).named("hood to 0.0"));
 
-            robot.port0.x().onTrue(hood.run(
-                                           _ -> {
-                                               lastPos += 0.025;
-                                               lastPos = Math.clamp(lastPos, 0.0, 1.0);
-                                               hood.setServoPosition(lastPos);
-                                           }
-            ).named("nudge up"));
+            robot.port0.x().onTrue(robot.hood
+                                       .run(_ -> {
+                                           lastPos += 0.025;
+                                           lastPos = Math.clamp(lastPos, 0.0, 1.0);
+                                           robot.hood.setServoPosition(lastPos);
+                                       })
+                                       .named("nudge up"));
 
-            robot.port0.a().onTrue(hood.run(
-                                           _ -> {
-                                               lastPos -= 0.025;
-                                               lastPos = Math.clamp(lastPos, 0.0, 1.0);
-                                               hood.setServoPosition(lastPos);
-                                           }
-            ).named("nudge down"));
+            robot.port0.a().onTrue(robot.hood
+                                       .run(_ -> {
+                                           lastPos -= 0.025;
+                                           lastPos = Math.clamp(lastPos, 0.0, 1.0);
+                                           robot.hood.setServoPosition(lastPos);
+                                       })
+                                       .named("nudge down"));
         }
     };
 }

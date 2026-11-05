@@ -570,25 +570,26 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     @Utility
     public static class Tester implements OpMode {
-        private final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true);
+        private Robot robot;
 
         public Tester(Robot robot) {
-            robot.port0.a().onTrue(turret.holdRobotRel(Rotations.of(0.00)));
-            robot.port0.b().onTrue(turret.holdRobotRel(Rotations.of(0.75)));
-            robot.port0.rightBumper().whileTrue(turret.trackRobotRel(() -> {
+            this.robot = robot;
+            robot.port0.a().onTrue(robot.turret.holdRobotRel(Rotations.of(0.00)));
+            robot.port0.b().onTrue(robot.turret.holdRobotRel(Rotations.of(0.75)));
+            robot.port0.rightBumper().whileTrue(robot.turret.trackRobotRel(() -> {
                 double x = robot.port0.getRightX();
                 double y = robot.port0.getRightY();
                 return new Rotation2d(-y, -x).getMeasure();
             }));
-            robot.port0.x().whileTrue(turret.zeroSequence());
+            robot.port0.x().whileTrue(robot.turret.zeroSequence());
 
-            robot.port0.dpadUp().whileTrue(turret.sysId());
-            robot.port0.dpadDown().onTrue(turret.run(_ -> turret.remakePID()).named("remake pid"));
+            robot.port0.dpadUp().whileTrue(robot.turret.sysId());
+            robot.port0.dpadDown().onTrue(robot.turret.run(_ -> robot.turret.remakePID()).named("remake pid"));
         }
 
         @Override
         public void start() {
-            if (!turret.isZeroed()) Scheduler.getDefault().schedule(turret.zeroSequence());
+            if (!robot.turret.isZeroed()) Scheduler.getDefault().schedule(robot.turret.zeroSequence());
         }
     }
 }
