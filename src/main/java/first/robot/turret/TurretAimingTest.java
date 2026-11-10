@@ -17,6 +17,7 @@ import org.wpilib.telemetry.TelemetryTable;
 
 import first.robot.DrivetrainTelemetry;
 import first.robot.Robot;
+import first.robot.drivetrain.DevbotConstants;
 import first.robot.drivetrain.DevbotTunerConstants;
 import first.robot.drivetrain.DrivetrainMechanism;
 import first.robot.launcher.LaunchCalculator;
@@ -28,7 +29,8 @@ public class TurretAimingTest implements OpMode {
     private final TelemetryTable table = TelemetryRegistry.getTable("turret aiming test");
 
     private final DrivetrainMechanism drivetrain = DevbotTunerConstants.createDrivetrain();
-    private final TurretMechanism turret = new TurretMechanism(drivetrain::getEstimatedPosition, () -> true);
+    private final TurretMechanism turret =
+        new TurretMechanism(drivetrain::getEstimatedPosition, () -> true, new DevbotConstants());
 
     public final DrivetrainTelemetry logger = new DrivetrainTelemetry(drivetrain, turret);
 

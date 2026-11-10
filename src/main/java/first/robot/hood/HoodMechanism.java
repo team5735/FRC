@@ -1,22 +1,21 @@
 package first.robot.hood;
 
 import org.wpilib.command3.Mechanism;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.hardware.discrete.AnalogInput;
 import org.wpilib.hardware.discrete.PWM;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.shape.Rectangle2d;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 
 import java.util.function.Supplier;
 
-import first.robot.FieldConstants;
 import first.robot.IDs;
 import first.robot.Robot;
 
-public class HoodMechanism implements Mechanism, TelemetryLoggable {
+@Logged
+public class HoodMechanism implements Mechanism {
     private final PWM servo = new PWM(IDs.HOOD_SERVO_PIN);
     private final AnalogInput feedback = new AnalogInput(IDs.HOOD_FEEDBACK_PIN);
 
@@ -109,15 +108,6 @@ public class HoodMechanism implements Mechanism, TelemetryLoggable {
             HoodConstants.LOWEST_SERVO_POSITION, HoodConstants.HIGHEST_SERVO_POSITION,
             HoodConstants.LOWEST_ANGLE_DEGREES, HoodConstants.HIGHEST_ANGLE_DEGREES, getNormalizedPosition()
         );
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("position", this.getHoodPosition());
-        table.log("angle_degrees", this.getHoodAngle());
-        table.log("servo/position", this.getServoSetpoint());
-        table.log("servo/feedback_voltage", this.getVoltage());
-        table.log("servo/feedback_position", getNormalizedPosition());
     }
 
     public boolean isInExclusionZone() {

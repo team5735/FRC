@@ -22,6 +22,7 @@ import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.Trigger;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.math.controller.ProfiledPIDController;
 import org.wpilib.math.controller.SimpleMotorFeedforward;
@@ -34,13 +35,10 @@ import org.wpilib.math.util.MathUtil;
 import org.wpilib.math.util.Units;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 
 import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import first.robot.FieldConstants;
@@ -50,7 +48,8 @@ import first.robot.drivetrain.RobotConstants;
 import first.robot.util.NTable;
 import first.robot.util.SysIdRoutine;
 
-public class TurretMechanism implements Mechanism, TelemetryLoggable {
+@Logged
+public class TurretMechanism implements Mechanism {
     private final TalonFX kraken = new TalonFX(IDs.TURRET_MOTOR_ID, IDs.DEFAULT_CANBUS);
     private final DigitalInput hallLimit = new DigitalInput(IDs.TURRET_LIMIT_PIN);
     public final Trigger limitTrigger = new Trigger(() -> !hallLimit.get());
@@ -58,9 +57,8 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
 
     private Supplier<Pose2d> robotPoseSupplier;
     private double prevVel = 0;
-    private RobotConstants driveConstants;
+    private final RobotConstants driveConstants;
     private Supplier<Boolean> turretEnabled;
-    private Consumer<Pose2d> setTurretPose;
 
     private NTable table;
 
@@ -73,7 +71,10 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
     private final SimpleMotorFeedforward ff =
         new SimpleMotorFeedforward(TurretConstants.KS, TurretConstants.KV, TurretConstants.KA);
 
-    public TurretMechanism(Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled) {
+    public TurretMechanism(
+        Supplier<Pose2d> robotPoseSupplier, Supplier<Boolean> turretEnabled, RobotConstants driveConstants
+    ) {
+        this.driveConstants = driveConstants;
         super();
         kraken.getConfigurator().apply(new TalonFXConfiguration());
         kraken.getConfigurator().apply(new MotorOutputConfigs()
@@ -214,15 +215,9 @@ public class TurretMechanism implements Mechanism, TelemetryLoggable {
         this.table.set("canTurnTo", canTurnTo(FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)));
         this.table.set("statorCurrent", kraken.getStatorCurrent().getValueAsDouble());
 
-        this.setTurretPose.accept(getMechanismPose());
+        this.table.set("mechanismPose", getMechanismPose());
 
         aimedAtHubTelemetry();
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        this.table = NTable.fromTelemetryTable(table);
-        doPeriodicTelemetry();
     }
 
     public Command getHardRunForward() {

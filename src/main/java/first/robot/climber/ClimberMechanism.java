@@ -5,16 +5,16 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import org.wpilib.command3.Mechanism;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 
 import first.robot.IDs;
 import first.robot.Robot;
 
-public class ClimberMechanism implements Mechanism, TelemetryLoggable {
+@Logged
+public class ClimberMechanism implements Mechanism {
     public final TalonFX talon = new TalonFX(IDs.CLIMB_TALON_ID, IDs.DEFAULT_CANBUS);
 
     private final DigitalInput limitDown = new DigitalInput(IDs.CLIMB_UPPER_LIMIT_PIN);
@@ -59,16 +59,6 @@ public class ClimberMechanism implements Mechanism, TelemetryLoggable {
         } else if (!canMoveUp && talon.getMotorVoltage().getValueAsDouble() > 0 && !overridden) {
             talon.setVoltage(0);
         }
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("limit_up", limitUp.get());
-        table.log("limit_down", limitDown.get());
-        table.log("current", talon.getSupplyCurrent().getValueAsDouble());
-        table.log("velocity", talon.getVelocity().getValueAsDouble());
-        table.log("forward_limit", talon.getForwardLimit().getValueAsDouble());
-        table.log("reverse_limit", talon.getReverseLimit().getValueAsDouble());
     }
 
     @Utility(name = "Climber Tester", group = "Testers")

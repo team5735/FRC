@@ -20,6 +20,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.driverstation.RobotState;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.kinematics.ChassisVelocities;
@@ -30,8 +31,6 @@ import org.wpilib.math.numbers.N3;
 import org.wpilib.sysid.SysIdRoutineLog;
 import org.wpilib.system.Notifier;
 import org.wpilib.system.RobotController;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -47,8 +46,8 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
  * Subsystem so it can easily be used in command-based projects.
  */
-public class DrivetrainMechanism
-    extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Mechanism, TelemetryLoggable {
+@Logged
+public class DrivetrainMechanism extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Mechanism {
     public RobotConstants constants;
 
     private static final double simLoopPeriod = 0.005;  // 5 ms
@@ -228,8 +227,7 @@ public class DrivetrainMechanism
 
     private boolean hasAppliedOperatorPerspective = false;
 
-    @Override
-    public void logTo(TelemetryTable table) {
+    public void periodic() {
         /*
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state. This
@@ -247,13 +245,14 @@ public class DrivetrainMechanism
             default -> "???";
         };
 
-        table.log("pose quality", asString);
-        table.log("can shoot accurately?", qualityIndex >= 2);
-        table.log(
-            "rotational confidence", getEstimatedPosition().getRotation().getMeasure().isNear(
-                                         lastVisionUpdatePose.getRotation().getMeasure(), Degrees.of(5)
-                                     )
-        );
+        NTable.root("drivetrain").set("pose quality", asString);
+        NTable.root("drivetrain").set("can shoot accurately?", qualityIndex >= 2);
+        NTable.root("drivetrain")
+            .set(
+                "rotational confidence", getEstimatedPosition().getRotation().getMeasure().isNear(
+                                             lastVisionUpdatePose.getRotation().getMeasure(), Degrees.of(5)
+                                         )
+            );
 
         if (!hasAppliedOperatorPerspective || RobotState.isDisabled()) {
             setOperatorForwardDirection(

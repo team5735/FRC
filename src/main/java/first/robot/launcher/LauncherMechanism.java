@@ -42,7 +42,7 @@ import first.robot.util.NTable;
 import first.robot.util.SysIdRoutine;
 
 @Logged
-public class LauncherMechanism implements Mechanism, TelemetryLoggable {
+public class LauncherMechanism implements Mechanism {
     private final TalonFX krakenLeft = new TalonFX(IDs.LAUNCHER_LEFT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
     private final TalonFX krakenRight = new TalonFX(IDs.LAUNCHER_RIGHT_KRAKEN_ID, IDs.DEFAULT_CANBUS);
 
@@ -87,13 +87,6 @@ public class LauncherMechanism implements Mechanism, TelemetryLoggable {
                             : 0;
         this.table.set("output", output);
         krakenLeft.setVoltage(output);
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("speed rpm", getRPM());
-        table.log("setpoint", setpoint);
-        table.log("!! setpoint", bangbang.getSetpoint());
     }
 
     public Command getResting() { return run(_ -> krakenLeft.setVoltage(0)).named("launcher: do not"); }

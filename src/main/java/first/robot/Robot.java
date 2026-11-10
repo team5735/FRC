@@ -6,10 +6,12 @@ package first.robot;
 
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.button.CommandXboxController;
+import org.wpilib.epilogue.Epilogue;
 import org.wpilib.framework.OpModeRobot;
 import org.wpilib.math.geometry.Pose2d;
 
 import first.robot.climber.ClimberMechanism;
+import first.robot.drivetrain.DevbotConstants;
 import first.robot.hood.HoodMechanism;
 import first.robot.intake.IntakeMechanism;
 import first.robot.launcher.LauncherMechanism;
@@ -24,12 +26,13 @@ public class Robot extends OpModeRobot {
     public final IntakeMechanism intake = new IntakeMechanism();
     public final ClimberMechanism climber = new ClimberMechanism();
     public final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(), FieldConstants.HOOD_EXCLUSION_ZONES);
-    public final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true);
+    public final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true, new DevbotConstants());
 
     public Robot() {}
 
     @Override
     public void robotPeriodic() {
+        Epilogue.update(this);
         Scheduler.getDefault().run();
     }
 }

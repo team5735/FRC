@@ -5,11 +5,10 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.hardware.bus.CANPort;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.tunable.TunableDouble;
 
 import java.util.function.BooleanSupplier;
@@ -19,7 +18,8 @@ import first.robot.IDs;
 import first.robot.Robot;
 import first.robot.util.NTable;
 
-public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
+@Logged
+public class SpinDexMechanism implements Mechanism {
     public final SparkFlex feedVortex = new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_FEED_VORTEX_ID, MotorType.kBrushless);
     public final SparkFlex wheelVortex =
         new SparkFlex(CANPort.CAN_D0, IDs.SPINDEX_WHEEL_VORTEX_ID, MotorType.kBrushless);
@@ -34,11 +34,6 @@ public class SpinDexMechanism implements Mechanism, TelemetryLoggable {
 
         feedVortex.clearFaults();
         wheelVortex.clearFaults();
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("wheel_output", wheelVortex.getAppliedOutput());
     }
 
     public void runFeeder() { feedVortex.setVoltage(feedVoltage.get()); }

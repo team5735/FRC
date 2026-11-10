@@ -4,8 +4,6 @@
 
 package first.robot.intake;
 
-import static org.wpilib.units.Units.Degrees;
-import static org.wpilib.units.Units.DegreesPerSecond;
 import static org.wpilib.units.Units.Radians;
 import static org.wpilib.units.Units.RotationsPerSecond;
 import static org.wpilib.units.Units.Second;
@@ -19,12 +17,11 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.command3.Trigger;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.hardware.discrete.DigitalInput;
 import org.wpilib.math.controller.ArmFeedforward;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 
@@ -32,7 +29,8 @@ import first.robot.IDs;
 import first.robot.Robot;
 import first.robot.util.SysIdRoutine;
 
-public class IntakeMechanism implements Mechanism, TelemetryLoggable {
+@Logged
+public class IntakeMechanism implements Mechanism {
     private final TalonFX intakeSlapdown = new TalonFX(IDs.INTAKE_SLAPDOWN_TALONFX_ID, IDs.DEFAULT_CANBUS);
     private final TalonFX intakeRoller = new TalonFX(IDs.INTAKE_ROLLER_TALONFX_ID, IDs.DEFAULT_CANBUS);
     private final ArmFeedforward ff = new ArmFeedforward(IntakeConstants.KS, IntakeConstants.KG, IntakeConstants.KV);
@@ -115,14 +113,6 @@ public class IntakeMechanism implements Mechanism, TelemetryLoggable {
 
     public Command sysIdDynamic(SysIdRoutine.Direction direction) {
         return routine.dynamic(direction, "intake dynamic");
-    }
-
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("limit_engaged", !hallLimit.get());
-        table.log("slapdown_volts", intakeSlapdown.getMotorVoltage().getValueAsDouble());
-        table.log("slapdown_pos_deg", getSlapdownPosition().in(Degrees));
-        table.log("slapdown_vel_dps", intakeSlapdown.getVelocity().getValue().in(DegreesPerSecond));
     }
 
     public Trigger limitEngaged = new Trigger(() -> !hallLimit.get());
