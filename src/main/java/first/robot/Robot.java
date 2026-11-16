@@ -4,11 +4,18 @@
 
 package first.robot;
 
+import org.wpilib.backend.NetworkTablesTelemetryBackend;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.button.CommandXboxController;
+import org.wpilib.driverstation.MatchState;
 import org.wpilib.epilogue.Epilogue;
+import org.wpilib.epilogue.Logged;
 import org.wpilib.framework.OpModeRobot;
 import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.networktables.NetworkTableInstance;
+import org.wpilib.telemetry.Telemetry;
+import org.wpilib.telemetry.TelemetryRegistry;
+import org.wpilib.telemetry.TelemetryTable;
 
 import first.robot.climber.ClimberMechanism;
 import first.robot.drivetrain.DevbotConstants;
@@ -18,6 +25,7 @@ import first.robot.launcher.LauncherMechanism;
 import first.robot.spindex.SpinDexMechanism;
 import first.robot.turret.TurretMechanism;
 
+@Logged
 public class Robot extends OpModeRobot {
     public final CommandXboxController port0 = new CommandXboxController(0);
 
@@ -28,7 +36,15 @@ public class Robot extends OpModeRobot {
     public final HoodMechanism hood = new HoodMechanism(() -> new Pose2d(), FieldConstants.HOOD_EXCLUSION_ZONES);
     public final TurretMechanism turret = new TurretMechanism(() -> Pose2d.ZERO, () -> true, new DevbotConstants());
 
-    public Robot() {}
+    public Robot() {
+        // dump everything into /
+        TelemetryRegistry.registerBackend("", new NetworkTablesTelemetryBackend(NetworkTableInstance.getDefault(), ""));
+        Epilogue.configure(config -> {
+            config.table = TelemetryRegistry.getTable("/");
+            // (note: the paths // and / are equivalent)
+            config.root = "/";
+        });
+    }
 
     @Override
     public void robotPeriodic() {
