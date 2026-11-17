@@ -204,7 +204,8 @@ public class NTEntry {
         // type.
         Struct<?> possibleStruct = getStructForType(value.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) possibleStruct;
+            @SuppressWarnings("unchecked")
+            Struct<T> casted = (Struct<T>) possibleStruct;
             setStruct(value, casted);
             return;
         }
@@ -218,7 +219,8 @@ public class NTEntry {
                 // component type of value. due to Java generics being a pile of type-erasing
                 // bullshit, we can cast everything to be in terms of Object and it should just
                 // work.
-                @SuppressWarnings("unchecked") Struct<Object> castedStruct = (Struct<Object>) possibleStruct;
+                @SuppressWarnings("unchecked")
+                Struct<Object> castedStruct = (Struct<Object>) possibleStruct;
                 setStructArray(casted, castedStruct);
                 return;
             }
@@ -303,7 +305,8 @@ public class NTEntry {
                 );
                 return null;
             }
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) struct;
+            @SuppressWarnings("unchecked")
+            Struct<T> casted = (Struct<T>) struct;
             return casted;
         }
 
@@ -318,7 +321,8 @@ public class NTEntry {
             if (!(possibleStruct instanceof Struct<?> struct) || !struct.getTypeClass().isAssignableFrom(classType)) {
                 return null;
             }
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) struct;
+            @SuppressWarnings("unchecked")
+            Struct<T> casted = (Struct<T>) struct;
             structCache.put(classType, struct);
             return casted;
 
@@ -475,7 +479,8 @@ public class NTEntry {
             if (!classType.isInstance(retrieved.getValue())) {
                 return defaultValue;
             }
-            @SuppressWarnings("unchecked") T value = (T) defaultValue.getClass().cast(retrieved.getValue());
+            @SuppressWarnings("unchecked")
+            T value = (T) defaultValue.getClass().cast(retrieved.getValue());
             return value;
         }
 
@@ -484,7 +489,8 @@ public class NTEntry {
         // type.
         Struct<?> possibleStruct = getStructForType(defaultValue.getClass());
         if (possibleStruct != null) {
-            @SuppressWarnings("unchecked") Struct<T> casted = (Struct<T>) possibleStruct;
+            @SuppressWarnings("unchecked")
+            Struct<T> casted = (Struct<T>) possibleStruct;
             T result = getStruct(casted);
             if (result == null) {
                 return defaultValue;
@@ -501,7 +507,8 @@ public class NTEntry {
                 // directly to it. note that the 'T' in getStructArray is different from the T
                 // here, and is in fact the value-type of the T here (meaning the T of #get is
                 // of type E[] where E is referred to as T within getStructArray)
-                @SuppressWarnings("unchecked") T result = (T) getStructArray(possibleStruct2);
+                @SuppressWarnings("unchecked")
+                T result = (T) getStructArray(possibleStruct2);
                 if (result == null) {
                     return defaultValue;
                 }

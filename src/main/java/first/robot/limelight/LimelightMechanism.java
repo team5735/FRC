@@ -130,8 +130,7 @@ public class LimelightMechanism implements Mechanism {
             if (nFiducials == 0) {
                 return;
             }
-            Translation3d translation =
-                new Translation3d(Meters.of(array[0]), Meters.of(array[1]), Meters.of(array[2]));
+            Translation3d translation = new Translation3d(Meters.of(array[0]), Meters.of(array[1]), Meters.of(array[2]));
             Rotation3d rotation = new Rotation3d(Degrees.of(array[3]), Degrees.of(array[4]), Degrees.of(array[5]));
             double latency = array[6];
 
@@ -197,11 +196,9 @@ public class LimelightMechanism implements Mechanism {
             2;
 
         if (estimate.pose2d.getTranslation().getX() < conservativeRobotRadius ||
-            estimate.pose2d.getTranslation().getX() >
-                (FieldConstants.FIELD_LENGTH_X.in(Meters) -conservativeRobotRadius) ||
+            estimate.pose2d.getTranslation().getX() > (FieldConstants.FIELD_LENGTH_X.in(Meters) - conservativeRobotRadius) ||
             estimate.pose2d.getTranslation().getY() < conservativeRobotRadius ||
-            estimate.pose2d.getTranslation().getY() >
-                (FieldConstants.FIELD_LENGTH_Y.in(Meters) -conservativeRobotRadius))
+            estimate.pose2d.getTranslation().getY() > (FieldConstants.FIELD_LENGTH_Y.in(Meters) - conservativeRobotRadius))
         {
             this.table.sub("checks").set("in field", false);
             accepted = false;
@@ -243,14 +240,9 @@ public class LimelightMechanism implements Mechanism {
 
     private double applyPenalties(PoseEstimate estimate) {
         double distPenalty = penalize(estimate.distToCamera, "distance");
-
-        double speedPenalty =
-            penalize(Math.hypot(drivetrain.getState().Velocity.vx, drivetrain.getState().Velocity.vy) * 5, "speed");
-
+        double speedPenalty = penalize(Math.hypot(drivetrain.getState().Velocity.vx, drivetrain.getState().Velocity.vy) * 5, "speed");
         double omegaPenalty = penalize(Math.abs(drivetrain.getState().Velocity.omega), "omega");
-
-        double ambiguityPenalty =
-            penalize(Arrays.stream(estimate.fiducials).mapToDouble(fiducial -> fiducial.ambiguity).sum(), "ambiguity");
+        double ambiguityPenalty = penalize(Arrays.stream(estimate.fiducials).mapToDouble(fiducial -> fiducial.ambiguity).sum(), "ambiguity");
         ambiguityPenalty *= ambiguityPenalty;
 
         double singleTagPenalty = penalize(estimate.fiducials.length == 1 ? 1 : 0, "single tag");
