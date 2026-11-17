@@ -20,7 +20,7 @@ if (isDone != null) {
 }
 ```
 
-- **Guards in an `if` condition are fine**: `if (goal != null && goal.kind() == LaunchGoal.SCORE)`,
+- Guards in an `if` condition are fine: `if (goal != null && goal.kind() == LaunchGoal.SCORE)`,
   `if (hallLimit.get() && !isZeroed)`.
 - When the override depends on the old value, compute into a local first so the default doesn't clobber it:
 
@@ -39,21 +39,21 @@ if (isDone != null) {
 
 ## Purity and state
 
-- **Prefer methods that return values** over methods with side effects. Small helpers (builders, metrics,
+- Prefer methods that return values over methods with side effects. Small helpers (builders, metrics,
   lookups) return what they make and the caller stores it (`LaunchParams params = LaunchCalculator.calculate(...)`,
   then `this.cachedParams = params;`).
-- **Static helpers don't mutate their arguments.** Low-level helpers are `private static` under
+- Static helpers don't mutate their arguments. Low-level helpers are `private static` under
   `// ---- low-level helpers (static, no side effects)` and return new state instead of writing into a field:
   `double hoodAngleDegrees = HoodMechanism.interp1(...)`. The one exception is an object that carries its own
   history (a `ProfiledPIDController`, a `LinearFilter`), and its Javadoc says so.
-- **State changes stay shallow.** A public method changes state itself or through one level of stateful helper. No
+- State changes stay shallow. A public method changes state itself or through one level of stateful helper. No
   chains like `periodic -> updateAimSolution -> updateTurretSetpoint -> updateHoodSetpoint`: fold the chain into
   one helper, or compute the decision with a pure helper and assign it in the public method
   (`LaunchParams params = LaunchCalculator.calculate(goal, drivetrain, chassisVelocities, turretPose); this.cachedParams = params;`).
-- **Getters don't mutate**, lazily or otherwise. All state is assigned in the constructor.
-- **Structured results are records**, not loose doubles, arrays, or maps: `LaunchCalculator.LaunchParams` (with
+- Getters don't mutate, lazily or otherwise. All state is assigned in the constructor.
+- Structured results are records, not loose doubles, arrays, or maps: `LaunchCalculator.LaunchParams` (with
   `isValid` false when no shot solution exists at the current range).
-- **Plain, not functional-looking**: no streams (`.map().filter().reduce()`), and no composed calls `f(g(x))`. Name
+- Plain, not functional-looking: no streams (`.map().filter().reduce()`), and no composed calls `f(g(x))`. Name
   the intermediate:
 
   ```java
@@ -63,19 +63,19 @@ if (isDone != null) {
 
 ## Names
 
-- **Methods are verbs**: what they do, not the end state. Prefixes `get set is has compute measure make solve
+- Methods are verbs: what they do, not the end state. Prefixes `get set is has compute measure make solve
   update convert check`: `getHoodPosition` (not `hoodPosition`), `computeLaunchParams` (not `launchParams`),
   `isInExclusionZone` (not `inExclusionZone`), `makeHoodMap`.
-- **No bare-field access from outside the class.** Use `getX()` / `setX()` methods; multi-value setters take
+- No bare-field access from outside the class. Use `getX()` / `setX()` methods; multi-value setters take
   arguments in their natural order (`TurretMechanism.setSoftLimits(Angle reverseLimit, Angle forwardLimit)`).
-- **Arguments say what they are**: `turretPoseSupplier` (not `poseSupplier`), `exclusionZones` (not `zones`),
+- Arguments say what they are: `turretPoseSupplier` (not `poseSupplier`), `exclusionZones` (not `zones`),
   `launchGoal` (not `goal`), `hoodAngleDegrees` (not `angle`).
-- **Frames in names.** Suffix poses, translations and velocities with the frame they're expressed in: field frame
+- Frames in names. Suffix poses, translations and velocities with the frame they're expressed in: field frame
   or the robot (chassis) frame — `turretPoseField`, `targetTranslationField`, `chassisVelocitiesRobot`. Methods
   that convert or act in a specific frame say so, matching what's already in the codebase:
   `holdFieldRelative`, `autoDriveRobotRelative`, `toFieldRelative`, `getAngleTurretRel`. Constants pin the frame
   the same way: `REVERSE_LIMIT_BOT_REL`.
-- **Units in names.** Prefer WPILib's typed units (`Angle`, `Distance`, `AngularVelocity`) over raw `double`s. When
+- Units in names. Prefer WPILib's typed units (`Angle`, `Distance`, `AngularVelocity`) over raw `double`s. When
   a raw `double` is unavoidable, suffix the name with its unit: `LOWEST_ANGLE_DEGREES`, `DYNAMIC_TOLERANCE_DEGREES`,
   `RPM_TOLERANCE`.
 - Alliance-dependent field locations go through `FieldConstants.alliance(...)` (e.g.
@@ -83,10 +83,10 @@ if (isDone != null) {
 
 ## Representations, time and units
 
-- **Durations are seconds, never loop counts**: `RECALC_PERIOD_S = 0.02`, not `_LOOPS = 1`. Elapsed-time checks
+- Durations are seconds, never loop counts: `RECALC_PERIOD_S = 0.02`, not `_LOOPS = 1`. Elapsed-time checks
   allow half a loop of slack (`elapsed >= timeoutS - 0.5 * LOOP_PERIOD_S`), since a 20 ms periodic loop checked
   against a 3.0 s timeout can land a loop either side of exactly 3.0 s.
-- **Constants** are `public static final`, grouped with related constants, each with a comment giving units and
+- Constants are `public static final`, grouped with related constants, each with a comment giving units and
   meaning:
 
   ```java
@@ -96,9 +96,9 @@ if (isDone != null) {
 
 ## Layout
 
-- **Mini blocks.** Separate distinct steps inside a method with a blank line, and put a few-word comment above each
+- Mini blocks. Separate distinct steps inside a method with a blank line, and put a few-word comment above each
   saying what it does (`// solve for the shot`, `// drive the flywheel to the RPM setpoint`).
-- **Formatting** (spacing, wrapping, brace placement) is handled by clang-format (`format.java.sh`, `.clang-format`
+- Formatting (spacing, wrapping, brace placement) is handled by clang-format (`format.java.sh`, `.clang-format`
   at the repo root, `BlockIndent`/120-column) — don't hand-format against it. A signature that doesn't fit on one
   line wraps with each argument block-indented, as clang-format already produces here:
 
@@ -106,24 +106,24 @@ if (isDone != null) {
   public static void
   calculate(LaunchGoal goal, DrivetrainMechanism drivetrain, ChassisVelocities robotVel, Pose2d turretPose) {
   ```
-- **Line length 120**, comments included (wrap long comments as continuation comment lines).
-- **Classes**, top to bottom: fields (each with a short trailing comment), the constructor, the public API, private
+- Line length 120, comments included (wrap long comments as continuation comment lines).
+- Classes, top to bottom: fields (each with a short trailing comment), the constructor, the public API, private
   stateful helpers called by public methods, the `private static` pure helpers, then a nested `@Utility Tester`
   class if the mechanism has one.
-- **Imports** all at the top of the file, no inline imports. Order, each group separated by a blank line: static
+- Imports all at the top of the file, no inline imports. Order, each group separated by a blank line: static
   unit imports (`org.wpilib.units.Units.*`); vendor libraries (`com.ctre.phoenix6.*`); WPILib (`org.wpilib.*`);
   `java.*`; our own packages (`first.*`) last.
 
 ## Where things live
 
-- **`*Constants` classes hold robot and mechanism facts only** (gear ratios, PID/FF gains, physical limits). CAN
+- `*Constants` classes hold robot and mechanism facts only (gear ratios, PID/FF gains, physical limits). CAN
   IDs and DIO pins live in `IDs.java`; field dimensions and scoring locations live in `FieldConstants.java`.
   Tuning values picked at competition don't get hardcoded into mechanism logic — they go in the matching
   `*Constants` class.
-- **Values or algorithms borrowed from elsewhere are references.** Logic taken from another team's public repo or
+- Values or algorithms borrowed from elsewhere are references. Logic taken from another team's public repo or
   write-up (e.g. `LaunchCalculator`'s "Logic based on FRC 6328 and write-ups by the independent developer Oblarg")
   is copied in with a provenance comment; we don't take it on as a dependency.
-- **Bring-up and tuning code lives in a nested `Tester`.** A mechanism that needs hands-on tuning gets a nested
+- Bring-up and tuning code lives in a nested `Tester`. A mechanism that needs hands-on tuning gets a nested
   `@Utility public static class Tester implements OpMode`, bound to controller buttons
   (`HoodMechanism.Tester`, `LauncherMechanism.Tester`). Don't extract shared test helpers across mechanisms unasked.
 
@@ -131,15 +131,15 @@ if (isDone != null) {
 
 Docstrings are Javadoc (`/** */`) — the format `javadoc`, VS Code, and IntelliJ all read directly.
 
-1. **Semantic first.** Lead with what the call means and what it's for, then the mechanics. Brief, factual, plain
+1. Semantic first. Lead with what the call means and what it's for, then the mechanics. Brief, factual, plain
    words; light on jargon and math (a formula only when it's the clearest statement).
-2. **Describe what is, not the journey.** No history, rationale, "previously", or "we changed X because".
-3. **Keep usage gotchas and invariants** in the overview: what a caller must know to use it correctly (that
+2. Describe what is, not the journey. No history, rationale, "previously", or "we changed X because".
+3. Keep usage gotchas and invariants in the overview: what a caller must know to use it correctly (that
    `holdRobotRel`'s goal is clamped to the turret's functional range automatically, that a `Tester` needs the
    robot disabled before rebinding).
-4. **Very brief tags.** Each `@param`, `@return` and `@throws` entry is one sentence. Units and frames go in that
+4. Very brief tags. Each `@param`, `@return` and `@throws` entry is one sentence. Units and frames go in that
    sentence (`Robot-relative {@link Angle} the turret should hold.`); what `null` means is spelled out.
-5. **Define every symbol in the method's own Javadoc**, not only the class's: what a magic number means, the frame
+5. Define every symbol in the method's own Javadoc, not only the class's: what a magic number means, the frame
    a value is expressed in, the unit.
 
 ### Methods
