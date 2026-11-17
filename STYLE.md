@@ -1,17 +1,44 @@
 # FRC 5735 Control Freaks
 
-How code, comments and Javadoc are written in this repo. For people and agents alike: follow it for new code and
-for any code you touch. Examples are Java (WPILib / `command3`), since that's what this repo is written in.
+How code, comments and Javadoc are written in this repo. For people and agents
+alike: follow it for new code and for any code you touch. All code is Java.
 
-## Conditionals: explicit `if`, never hidden in an expression
+## Units
 
-No ternaries (`a ? b : c`), no `x = y != null ? y : default`, and no short-circuit `&&` / `||` used to compute a
-value (`boolean done = isDone != null && isDone.getAsBoolean();`). Assign the default, then override in an `if`:
+Use the units library obsessively. When input (e.g. motor readings such as
+current RPM) is retrieved (without units-library packaging), add the type as
+quickly as possible.
 
+Don't:
 ```java
-double hoodAngleDegrees = HoodConstants.LOWEST_ANGLE_DEGREES;
-if (requestedAngleDegrees != null) {
-    hoodAngleDegrees = requestedAngleDegrees;
+double shooterCurrentRPM = motor.getVelocity();
+double distanceFromTagMeters = lltable.get("dx", 0.0);
+```
+
+Do:
+```java
+AngularVelocity shooterSpeed = RPM.of(motor.getVelocity());
+Distance distanceFromTag = Meters.of(lltable.get("dx", 0.0));
+```
+
+## Logic
+
+Always use control structures, such as if-statements and loops. Don't use
+ternaries or short-circuiting logic.
+
+Don't:
+```java
+Pose2d retrieved = drivetrain.getEstimatedPosition();
+Pose2d pose = retrieved == null ? new Pose2d() : retrieved;
+
+boolean done = boolean done = isDone != null && isDone.getAsBoolean();
+```
+
+Do:
+```java
+Angle hoodAngle = HoodConstants.LOWEST_ANGLE;
+if (requestedAngle != null) {
+    hoodAngle = requestedAngle;
 }
 
 boolean hasHitSetpoint = false;
@@ -20,186 +47,179 @@ if (isDone != null) {
 }
 ```
 
-- Guards in an `if` condition are fine: `if (goal != null && goal.kind() == LaunchGoal.SCORE)`,
-  `if (hallLimit.get() && !isZeroed)`.
-- When the override depends on the old value, compute into a local first so the default doesn't clobber it:
-
-  ```java
-  double oldAngleDegrees = hood.getHoodAngle();  // snapshot before the default below overwrites it
-  double hoodAngleDegrees = HoodConstants.LOWEST_ANGLE_DEGREES;
-  if (nudgeUp) {
-      hoodAngleDegrees = oldAngleDegrees + NUDGE_DEGREES;  // depends on the real old angle, not the default
-  }
-  ```
-
-  Assigning the default straight into `hoodAngleDegrees` first, then writing `hoodAngleDegrees = hoodAngleDegrees +
-  NUDGE_DEGREES` in the override, would nudge off of `LOWEST_ANGLE_DEGREES` instead of the hood's actual position.
-- A plain boolean built from comparisons isn't a conditional and is fine:
-  `return errorDegrees <= TurretConstants.TOLERANCE_DEGREES && errorRpm <= LauncherConstants.RPM_TOLERANCE;`.
+Don't forget to snapshot things you're nudging:
+```java
+Angle oldAngle = hood.getHoodAngle();  // snapshot before the default below overwrites it
+Angle hoodAngle = HoodConstants.LOWEST_ANGLE;
+if (nudgeUp) {
+    hoodAngle = oldAngle + NUDGE_ANGLE;  // depends on the real old angle, not the default
+}
+```
 
 ## Purity and state
 
-- Prefer methods that return values over methods with side effects. Small helpers (builders, metrics,
-  lookups) return what they make and the caller stores it (`LaunchParams params = LaunchCalculator.calculate(...)`,
-  then `this.cachedParams = params;`).
-- Static helpers don't mutate their arguments. Low-level helpers are `private static` under
-  `// ---- low-level helpers (static, no side effects)` and return new state instead of writing into a field:
-  `double hoodAngleDegrees = HoodMechanism.interp1(...)`. The one exception is an object that carries its own
-  history (a `ProfiledPIDController`, a `LinearFilter`), and its Javadoc says so.
-- State changes stay shallow. A public method changes state itself or through one level of stateful helper. No
-  chains like `periodic -> updateAimSolution -> updateTurretSetpoint -> updateHoodSetpoint`: fold the chain into
-  one helper, or compute the decision with a pure helper and assign it in the public method
-  (`LaunchParams params = LaunchCalculator.calculate(goal, drivetrain, chassisVelocities, turretPose); this.cachedParams = params;`).
-- Getters don't mutate, lazily or otherwise. All state is assigned in the constructor.
-- Structured results are records, not loose doubles, arrays, or maps: `LaunchCalculator.LaunchParams` (with
-  `isValid` false when no shot solution exists at the current range).
-- Plain, not functional-looking: no streams (`.map().filter().reduce()`), and no composed calls `f(g(x))`. Name
-  the intermediate:
+A pure function is one that always returns the same thing for the same inputs.
+State is a general term for anything that outlives a single call to a function.
+State should be minimized, but writing purely functional (no state) robot code
+is really hard, so this style guide merely cautions against too much state. If a
+function changes state, document it with Javadocs.
 
-  ```java
-  Pose2d turretPoseField = drivetrain.getEstimatedPosition().transformBy(RobotConstants.ROBOT_TO_TURRET);
-  Translation2d turretToTarget = FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER).minus(turretPoseField.getTranslation());
-  ```
+Don't:
+```java
+public class HoodMechanism {
+    public static double targetAngle;
+    
+    // (1)
+    public static void interp1(double start, double end, double t) {
+        targetAngle = start + (end - start) * t;
+    }
+}
+```
+
+(1) is much better implemented as a pure function:
+```java
+public static double interp1(double start, double end, double t) {
+    return start + (end - start) * t;
+}
+```
+
+(Note: most classes in org.wpilib.math.geometry provide interpolation methods.
+Use those instead, if applicable.)
 
 ## Names
 
-- Methods are verbs: what they do, not the end state. Prefixes `get set is has compute measure make solve
-  update convert check`: `getHoodPosition` (not `hoodPosition`), `computeLaunchParams` (not `launchParams`),
-  `isInExclusionZone` (not `inExclusionZone`), `makeHoodMap`.
-- No bare-field access from outside the class. Use `getX()` / `setX()` methods; multi-value setters take
-  arguments in their natural order (`TurretMechanism.setSoftLimits(Angle reverseLimit, Angle forwardLimit)`).
-- Arguments say what they are: `turretPoseSupplier` (not `poseSupplier`), `exclusionZones` (not `zones`),
-  `launchGoal` (not `goal`), `hoodAngleDegrees` (not `angle`).
-- Frames in names. Suffix poses, translations and velocities with the frame they're expressed in: field frame
-  or the robot (chassis) frame — `turretPoseField`, `targetTranslationField`, `chassisVelocitiesRobot`. Methods
-  that convert or act in a specific frame say so, matching what's already in the codebase:
-  `holdFieldRelative`, `autoDriveRobotRelative`, `toFieldRelative`, `getAngleTurretRel`. Constants pin the frame
-  the same way: `REVERSE_LIMIT_BOT_REL`.
-- Units in names. Prefer WPILib's typed units (`Angle`, `Distance`, `AngularVelocity`) over raw `double`s. When
-  a raw `double` is unavoidable, suffix the name with its unit: `LOWEST_ANGLE_DEGREES`, `DYNAMIC_TOLERANCE_DEGREES`,
-  `RPM_TOLERANCE`.
-- Alliance-dependent field locations go through `FieldConstants.alliance(...)` (e.g.
-  `FieldConstants.alliance(FieldConstants.BLUE_HUB_CENTER)`), never a hand-written sign flip on red/blue.
+If you have units in the name of a variable, you should (most of the time) be
+using the units library instead. Suffixing a variable with its units when it
+already knows its units (due to being of type Distance instead of double, for
+example) isn't just redundant, it's error-prone: if the actual units change, you
+have to remember to change the name, and because we're human, that is not going
+to happen correctly 100% of the time.
 
-## Representations, time and units
+Methods are verbs, because they do something. Following this produces code that
+reads more like English and therefore more naturally. The prefixes `get set is
+has compute measure make solve update convert check` are good starting points.
 
-- Durations are seconds, never loop counts: `RECALC_PERIOD_S = 0.02`, not `_LOOPS = 1`. Elapsed-time checks
-  allow half a loop of slack (`elapsed >= timeoutS - 0.5 * LOOP_PERIOD_S`), since a 20 ms periodic loop checked
-  against a 3.0 s timeout can land a loop either side of exactly 3.0 s.
-- Constants are `public static final`, grouped with related constants, each with a comment giving units and
-  meaning:
-
-  ```java
-  public static final double RPM_TOLERANCE = 35;  // RPM, ~1% of the default 3000 RPM setpoint
-  public static final Angle LOWEST_ANGLE = Degrees.of(8.0);  // physical minimum the hood servo can reach
-  ```
-
-## Layout
-
-- Mini blocks. Separate distinct steps inside a method with a blank line, and put a few-word comment above each
-  saying what it does (`// solve for the shot`, `// drive the flywheel to the RPM setpoint`).
-- Formatting (spacing, wrapping, brace placement) is handled by clang-format (`format.java.sh`, `.clang-format`
-  at the repo root, `BlockIndent`/120-column) — don't hand-format against it. A signature that doesn't fit on one
-  line wraps with each argument block-indented, as clang-format already produces here:
-
-  ```java
-  public static void
-  calculate(LaunchGoal goal, DrivetrainMechanism drivetrain, ChassisVelocities robotVel, Pose2d turretPose) {
-  ```
-- Line length 120, comments included (wrap long comments as continuation comment lines).
-- Classes, top to bottom: fields (each with a short trailing comment), the constructor, the public API, private
-  stateful helpers called by public methods, the `private static` pure helpers, then a nested `@Utility Tester`
-  class if the mechanism has one.
-- Imports all at the top of the file, no inline imports. Order, each group separated by a blank line: static
-  unit imports (`org.wpilib.units.Units.*`); vendor libraries (`com.ctre.phoenix6.*`); WPILib (`org.wpilib.*`);
-  `java.*`; our own packages (`first.*`) last.
-
-## Where things live
-
-- `*Constants` classes hold robot and mechanism facts only (gear ratios, PID/FF gains, physical limits). CAN
-  IDs and DIO pins live in `IDs.java`; field dimensions and scoring locations live in `FieldConstants.java`.
-  Tuning values picked at competition don't get hardcoded into mechanism logic — they go in the matching
-  `*Constants` class.
-- Values or algorithms borrowed from elsewhere are references. Logic taken from another team's public repo or
-  write-up (e.g. `LaunchCalculator`'s "Logic based on FRC 6328 and write-ups by the independent developer Oblarg")
-  is copied in with a provenance comment; we don't take it on as a dependency.
-- Bring-up and tuning code lives in a nested `Tester`. A mechanism that needs hands-on tuning gets a nested
-  `@Utility public static class Tester implements OpMode`, bound to controller buttons
-  (`HoodMechanism.Tester`, `LauncherMechanism.Tester`). Don't extract shared test helpers across mechanisms unasked.
-
-## Docstrings
-
-Docstrings are Javadoc (`/** */`) — the format `javadoc`, VS Code, and IntelliJ all read directly.
-
-1. Semantic first. Lead with what the call means and what it's for, then the mechanics. Brief, factual, plain
-   words; light on jargon and math (a formula only when it's the clearest statement).
-2. Describe what is, not the journey. No history, rationale, "previously", or "we changed X because".
-3. Keep usage gotchas and invariants in the overview: what a caller must know to use it correctly (that
-   `holdRobotRel`'s goal is clamped to the turret's functional range automatically, that a `Tester` needs the
-   robot disabled before rebinding).
-4. Very brief tags. Each `@param`, `@return` and `@throws` entry is one sentence. Units and frames go in that
-   sentence (`Robot-relative {@link Angle} the turret should hold.`); what `null` means is spelled out.
-5. Define every symbol in the method's own Javadoc, not only the class's: what a magic number means, the frame
-   a value is expressed in, the unit.
-
-### Methods
-
+Don't:
 ```java
-/**
- * Linear interpolation of xq between (x0, y0) and (x1, y1). Use it to convert between a hood servo setpoint and
- * the physical angle it drives to.
- *
- * @param x0 Input value at the first reference point.
- * @param x1 Input value at the second reference point; must not equal x0.
- * @param y0 Output value at the first reference point.
- * @param y1 Output value at the second reference point.
- * @param xq Input value to interpolate at; need not lie between x0 and x1.
- * @return   Interpolated output value.
- * @throws IllegalArgumentException When x0 equals x1.
- */
-public static double interp1(double x0, double x1, double y0, double y1, double xq) {
+public Angle hoodPosition() { ... }
+public LaunchParams launchParams(...) { ... }
+public boolean inExclusionZone() { ... }
 ```
 
+Do:
 ```java
-/**
- * Runs the turret to a specified, moving {@link Angle}.
- *
- * @param goal Robot-relative {@link Angle}; clamped to the turret's functional range automatically.
- * @return {@link Command} that sets the {@link ProfiledPIDController}'s goal to the parameter, then repeatedly
- *         applies its output to the motor.
- */
-public Command holdRobotRel(Angle goal) {
+public Angle getHoodPosition() { ... }
+public LaunchParams computeLaunchParams(...) { ... }
+public boolean isInExclusionZone() { ... }
 ```
 
-- The overview is first, on the line after the opening `/**`.
-- `@param` lists every argument, as one sentence. Leave the tag out entirely when there are none.
-- `@return` is one sentence, left out when the method returns `void`.
-- `@throws ErrorType When it's thrown.` for each exception thrown on purpose, left out when nothing is thrown.
-- Classes: the class Javadoc is the overview of what an instance is and how it's used. Records document their
-  fields with `@param` on the record declaration itself (one sentence each, same as a method argument):
+Don't access class fields directly. Use `getX()` / `setX()` methods.
 
-  ```java
-  /**
-   * Solution to a single shot: the turret, hood and flywheel setpoints needed to hit the target.
-   *
-   * @param isValid          False when the target is out of range; the other fields are then meaningless.
-   * @param turretAngle      Turret angle, robot-relative.
-   * @param turretVelocity   Turret angular velocity to track while driving.
-   * @param hoodAngle        Hood angle.
-   * @param flywheelVelocity Flywheel angular velocity.
-   */
-  public record LaunchParams(
-      boolean isValid, Angle turretAngle, AngularVelocity turretVelocity, Angle hoodAngle, AngularVelocity flywheelVelocity
-  ) {}
-  ```
+Prefer verbosity: say as much as is reasonable in names. With liberal use of
+autocompletion, you don't have to type your long names out every single time you
+use them. Terseness tends to elide information the writer wrongly assumes the
+reader has: the purpose of a function, what angle a quantity measures, and so
+on.
+
+If there is ever a chance of somebody confusing reference frames, use them
+liberally in names. For example, the Limelight can give us the position of the
+robot in tag space, the position of the tag in robot space, or the position of
+the robot in field space. Variables (and constants) being clear about what frame
+of reference they're assuming helps greatly.
+
+## Formatting
+
+The formatting enforced by the formatting configuration (.clang-format) should
+be learned. The pre-push hook that runs clang-format on the project is used to
+enforce consistent formatting, but you should not rely on it. If the spacing is
+consistent, that's one less thing you have to think about when reading code.
+
+Write your code in paragraphs. If you have a chunk of logic that it makes sense
+to separate from the rest, simply add newlines. Every chunk should do one thing
+with minimal spill/blurring. If it's unclear what a chunk does, it may help to
+put a comment before the chunk starts quickly explaining its logic and purpose.
+
+Do not fight the auto-formatter. You will lose. Sometimes, it produces ugly
+code, obscuring the structure or just being wasteful with screen space, but that
+is worth it for the consistency it offers. Note that while clang-format does
+respect individual blank lines, trusting you to use them wisely per the previous
+paragraph, it does not respect most other spacing (such as putting a line break
+in the middle of a long chain of functions), unlike some other tools.
+
+## Project structure
+
+All robot code is in src/main/java/first/robot. Each subsystem gets its own
+folder here. For subsystem X, src/main/java/first/robot/x/ can/will contain:
+- `XMechanism.java` (required): the mechanism class for this subsystem
+- `XConstants.java`: constants go here (`public static final`, SCREAMING_SNAKE)
+- `XTester.java`: only separate the tester class if it's too long to fit
+                  inside the mechanism class.
+
+Constants files should not contain logic. Logic typically belongs in the main
+mechanism class, but if the mechanism class is getting too large, refactoring
+logic out into a separate file in the x directory is a good idea.
+
+Constants files should (and therefore, mechanism files should not) contain
+things like tuned values. For example, some motor's default RPM, or perhaps the
+max speed at which the robot should drive.
+
+If code is borrowed, try to keep it in a separate file (unless it's really not
+that much code). (Of course, you should attribute your borrowing.)
+
+Unlike 2026 code, all CAN/DIO/etc IDs live in ...robot/IDs.java. However, use
+judgement in what you put here: unless a constant really is an ID (identifier)
+of some kind, it should stay out of this file.
+
+Tester classes live at the end of their respective mechanism classes. They
+should look something like the following, continuing the example of using the X
+subsystem from earlier:
+```java
+@Utility(name = "X Tester", group = "Testers")
+public static class Tester implements OpMode {
+    // ...potentially things here...
+    public Tester(Robot robot) { ... }
+}
+```
+
+## Documentation
+
+Use javadoc. Multiline comments (`/* this is commented */`) that start with an
+extra * (`/** this is a javadoc comment */`) are javadoc comments. Javadoc is a
+sort of mini-language used to describe the interfaces and purposes of a
+function. Here is an example Javadoc, taken from NTEntry.java as it stands:
+```java
+/**
+* Creates a tunable for the named entry with the given getter, setter,
+* classType, and config.
+*
+* @param getter      function called when NT wants to update the tunable's
+*                    value
+* @param setCallback function called when the tunable is changed in NT
+* @param classType   relevant type
+* @param config      config of the tunable
+*
+* @return the Tunable
+*/
+```
+The first line ("Creates a tunable...") is what the function does. It should
+be structured as fitting after the function name: "`tunable` creates a...".
+If you're going to make a javadoc, it should describe all the parameters and
+return value (if any) with as many `@param`s and `@return`s as necessary.
+Javadocs should not be redundant with what is actually written, as then they
+easily become outdated. Say what it's supposed to do, not what it does. Don't
+waste the reader's time, either (tags should be as short as you can be while
+maintaining clarity).
 
 ## Comments
 
-- Same rules as Javadoc: what the code does and what a reader must know, not how it got that way. No history, no
-  "fixed", "new", "was X".
-- One short comment per mini block; trailing comments for fields and non-obvious lines (units, frames, what `null`
-  means). Gotchas (a Phoenix6 firmware quirk, a CAN bus ordering requirement) belong in comments.
-- Delete stale comments. When filling in code the user started, keep their comment lines.
+Comments that are not javadocs should be used judiciously, if and only if there
+is no better way to make the code's purpose and workings clearer. Comments that
+duplicate code are worse than redundant, because eventually, regardless of how
+diligent you may be, one will be updated without the other, at which point the
+comment is worse than useless. Perfect code needs no comments, because the code
+reads better than the comments ever would (no need to translate computer
+concepts into english if the recipient is a computer), but perfect code also
+does not exist.
 
 ## Docs
 
@@ -207,5 +227,5 @@ README entries describe current behaviour and are updated with each API change.
 
 ## Language
 
-Inclusive terms: primary / main / leader (not master), replica / secondary (not slave), allowlist / denylist (not
-whitelist / blacklist).
+Inclusive terms: main/focus instead of master, client instead of slave,
+allowlist/denylist instead of whitelist/blacklist, etc.
